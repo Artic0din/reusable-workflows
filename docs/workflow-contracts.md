@@ -82,6 +82,9 @@ Before queueing, it checks current repository auto-merge/squash settings, strict
 Other committers fail closed, including signed human commits attributed to Dependabot.
 The complete paginated commit count must match the live PR.
 Only minor/patch updates with no maintainer changes qualify.
+Branches requiring GitHub's merge queue are unsupported and rejected during preflight before queueing.
+Preflight requires the live pull request's isMergeQueueEnabled field to be exactly false, covering effective branch protection as well as rulesets.
+This workflow manages native automatic merge requests; it does not dequeue merge-queue entries.
 Shared-workflow updates and missing metadata require manual review.
 The queue step records eligibility only after all guards and the merge request succeed.
 A separate cleanup step revokes an existing request unless the job, metadata and queue step all succeeded with that positive result.

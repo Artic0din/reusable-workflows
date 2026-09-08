@@ -27,6 +27,7 @@ jobs:
     steps:
       - name: Verify current merge eligibility
         if: ${{ inputs.enabled }}
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -48,6 +49,7 @@ jobs:
             jq -e --argjson expected "$REQUIRED_CHECKS" '
               [.[] | select(.type == "required_status_checks" and
                 .parameters.strict_required_status_checks_policy == true)] as $rules |
+              all(.[]; .type != "merge_queue") and
               any(.[]; .type == "pull_request" and .parameters.required_review_thread_resolution == true) and
               (($expected - [$rules[].parameters.required_status_checks[].context]) | length == 0)
             '
@@ -57,6 +59,11 @@ jobs:
             .head.sha == $head and .head.repo.full_name == $repo and
             .base.ref == $base and .base.repo.full_name == $repo
           ' "$RUNNER_TEMP/dependency-pr.json"
+          gh api graphql -f owner="${REPOSITORY%%/*}" -f name="${REPOSITORY#*/}" -F number="$PR_NUMBER" \
+            -f query='query($owner:String!,$name:String!,$number:Int!) {
+              repository(owner:$owner,name:$name) { pullRequest(number:$number) { isMergeQueueEnabled } }
+            }' > "$RUNNER_TEMP/merge-queue.json"
+          jq -e '.data.repository.pullRequest.isMergeQueueEnabled == false' "$RUNNER_TEMP/merge-queue.json"
           gh api --paginate --slurp "repos/$REPOSITORY/pulls/$PR_NUMBER/commits?per_page=100" |
             jq -e --arg head "$PR_HEAD_SHA" --slurpfile pr "$RUNNER_TEMP/dependency-pr.json" '
               add as $commits |
