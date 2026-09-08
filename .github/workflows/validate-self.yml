@@ -36,6 +36,10 @@ jobs:
   workflows:
     name: Workflow-validation caller
     uses: ./.github/workflows/linter.yml  # zizmor: ignore[self-repository]
+    with:
+      yaml-paths: |
+        .github
+        .yamllint.yml
   secrets:
     name: Secret-scan caller
     uses: ./.github/workflows/secret-scan.yml  # zizmor: ignore[self-repository]

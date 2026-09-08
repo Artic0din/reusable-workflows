@@ -47,7 +47,13 @@ jobs:
           YAML_PATHS: ${{ inputs.yaml-paths }}
           YAML_CONFIG: ${{ inputs.yaml-config }}
         run: |
-          mapfile -t paths < <(printf '%s\n' "$YAML_PATHS")
+          paths=()
+          while IFS= read -r path; do
+            if [[ "$path" =~ [^[:space:]] ]]; then
+              paths+=("$path")
+            fi
+          done <<< "$YAML_PATHS"
+          test "${#paths[@]}" -gt 0
           yamllint --strict -c "$YAML_CONFIG" -- "${paths[@]}"
       - name: Check workflow security
         working-directory: source

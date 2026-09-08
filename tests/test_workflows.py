@@ -98,6 +98,18 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertRegex(checkout["with"]["ref"], r"^[0-9a-f]{40}$")
         self.assertFalse(checkout["with"]["persist-credentials"])
 
+    def test_yaml_paths_accept_trailing_newlines_and_reject_empty_lists(self) -> None:
+        (self.root / ".yamllint.yml").write_text("extends: default\nrules:\n  document-start: disable\n")
+        (self.root / "first.yml").write_text("name: first\n")
+        (self.root / "second.yml").write_text("name: second\n")
+        script = workflow_step("linter.yml", "Validate caller YAML")
+        for paths in ("first.yml", "first.yml\nsecond.yml\n", "\nfirst.yml\n\n"):
+            result = run_step(script, self.root, YAML_PATHS=paths, YAML_CONFIG=".yamllint.yml")
+            self.assertEqual(result.returncode, 0, result.stderr)
+        for paths in ("", "\n \n", "missing.yml\n"):
+            self.assertNotEqual(run_step(script, self.root, YAML_PATHS=paths,
+                                        YAML_CONFIG=".yamllint.yml").returncode, 0)
+
     def test_generated_directory_symlink_cannot_bypass_verification(self) -> None:
         self.initialize_output()
         (self.root / "alias").symlink_to("dist", target_is_directory=True)

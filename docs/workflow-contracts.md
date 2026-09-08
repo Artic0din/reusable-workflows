@@ -44,6 +44,7 @@ The self-validation source job tests the current implementation as well as exerc
 The actionlint Dockerfile and validation dependencies are library-owned.
 
 yaml-paths is a newline-separated list, default .github.
+Blank lines are ignored, including the trailing newline from YAML block scalars; an empty list fails.
 yaml-config defaults to the caller's .yamllint.yml.
 YAML checks, actionlint, and offline pedantic zizmor fail the workflow when they find problems.
 Callers retain their own language-specific lint and automation tests.
