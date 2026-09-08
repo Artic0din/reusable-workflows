@@ -11,6 +11,6 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Fixed
 
-- Cancelled previously enabled dependency auto-merge after unsuccessful attempts while protecting newer requests with internal serialization and current-head validation.
+- Cancelled previously enabled dependency auto-merge after unsuccessful attempts while protecting newer requests with internal serialization, retained pending validations and current-head validation.
 - Rejected nested generated-output symlinks before and after builds and prevented npm script inputs from being interpreted as command options.
 - Corrected instruction-link validation for filenames with balanced parentheses and escaped punctuation.

@@ -88,10 +88,15 @@ If that command does not succeed, an always-run cleanup step disables any existi
 This includes failed eligibility or metadata checks, skipped major/maintainer updates, cancelled steps and ambiguous queue failures.
 The cleanup reads current state independently of the guard's temporary files, avoids writes when auto-merge is already disabled or the PR is closed, and reports API failures instead of suppressing them.
 The job serializes all attempts for each repository/PR with a library-owned `reusable-dependabot-automerge-` concurrency group and does not cancel an active attempt.
-Caller workflows must use a different concurrency group if they also configure serialization.
+It uses `queue: max` so delayed older events cannot replace a waiting current-head validation.
+Caller workflows that also configure serialization must use a different concurrency group with `queue: max` and `cancel-in-progress: false`, or omit their redundant concurrency setting.
 Cleanup checks that the current PR head still matches its triggering head before cancelling auto-merge.
 This protects newer requests even when an older workflow starts late; [GitHub does not guarantee dispatch ordering](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
 Cleanup needs a running job and working GitHub API access; it cannot revoke a completed merge or run after the runner is forcibly terminated.
+GitHub limits each queue to 100 pending attempts and cancels additional arrivals when full; an attempt cancelled at that limit must be rerun before relying on its validation or cleanup.
+The pinned actionlint 1.7.12 does not yet recognize GitHub's documented `queue` property.
+A temporary path-specific exception suppresses only that unknown-key diagnostic; regression tests require `queue: max` and `cancel-in-progress: false`.
+Remove this exception when the pinned actionlint supports `queue`; other syntax checks remain enabled.
 There is no checkout, execution of PR code, automatic approval, or protection bypass.
 GitHub may merge immediately if all configured requirements already pass.
 Do not enable this capability until the caller's effective rules and its intended review requirements are verified.

@@ -99,7 +99,26 @@ class AutoMergeCleanupTests(unittest.TestCase):
         self.assertEqual(job.get('concurrency'), {
             'group': 'reusable-dependabot-automerge-${{ github.repository }}-${{ github.event.pull_request.number }}',
             'cancel-in-progress': False,
+            'queue': 'max',
         })
+
+    def test_delayed_older_run_does_not_evict_current_head_cleanup(self) -> None:
+        self.assertEqual(self.queue().returncode, 0)
+        current_head = 'd' * 40
+        state = json.loads(self.state.read_text())
+        state['head']['sha'] = current_head
+        self.state.write_text(json.dumps(state))
+        concurrency = yaml.safe_load(WORKFLOW.read_text())['jobs']['dependency']['concurrency']
+        pending: list[str] = []
+        # Model GitHub's documented queue replacement while an older run is active.
+        for head in (current_head, 'c' * 40):
+            if concurrency.get('queue', 'single') == 'single':
+                pending.clear()
+            pending.append(head)
+        for head in ('b' * 40, *pending):
+            result = self.cleanup('failure', PR_HEAD_SHA=head)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(json.loads(self.state.read_text())['auto_merge'])
 
     def test_ambiguous_queue_failure_is_cancelled(self) -> None:
         self.assertNotEqual(self.queue(QUEUE_FAILURE='true').returncode, 0)

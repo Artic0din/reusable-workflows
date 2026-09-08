@@ -25,6 +25,7 @@ jobs:
     concurrency:
       group: reusable-dependabot-automerge-${{ github.repository }}-${{ github.event.pull_request.number }}
       cancel-in-progress: false
+      queue: max
     permissions:
       contents: write  # Request a protected squash merge for the verified head.
       pull-requests: write  # Enable auto-merge without approving reviews.
