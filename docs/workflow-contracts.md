@@ -82,11 +82,16 @@ Before queueing, it checks current repository auto-merge/squash settings, strict
 Other committers fail closed, including signed human commits attributed to Dependabot.
 The complete paginated commit count must match the live PR.
 Only minor/patch updates with no maintainer changes qualify.
+Shared-workflow updates and missing metadata require manual review.
+The queue step records eligibility only after all guards and the merge request succeed.
+A separate cleanup step revokes an existing request unless the job, metadata and queue step all succeeded with that positive result.
+Cleanup runs after failures or cancellation and cannot enable a merge.
+Callers must serialize runs per pull request with cancellation disabled to prevent overlapping queue and cleanup steps.
 The merge command pins the expected head and respects GitHub protections.
 There is no checkout, execution of PR code, automatic approval, or protection bypass.
 GitHub may merge immediately if all configured requirements already pass.
 Do not enable this capability until the caller's effective rules and its intended review requirements are verified.
-Fixture tests validate the guard; an actual eligible dependency PR is needed to prove live operation.
+Fixture tests execute both queueing and cancellation; an actual eligible dependency PR is needed to prove live operation.
 
 ## Secret scan
 

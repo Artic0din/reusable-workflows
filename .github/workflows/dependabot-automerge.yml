@@ -71,12 +71,47 @@ jobs:
         with:
           github-token: ${{ github.token }}
       - name: Queue eligible update
-        if: >-
-          steps.metadata.outputs.maintainer-changes == 'false' &&
-          (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-           steps.metadata.outputs.update-type == 'version-update:semver-minor')
+        id: enable-automerge
+        if: ${{ success() && steps.metadata.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: gh pr merge --auto --squash --match-head-commit "$PR_HEAD_SHA" "$PR_URL"
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          MAINTAINER_CHANGES: ${{ steps.metadata.outputs.maintainer-changes }}
+        run: |
+          case "$(printf '%s' "$DEPENDENCY_NAMES" | tr '[:upper:]' '[:lower:]')" in
+            ''|*artic0din/reusable-workflows*) exit 0 ;;
+          esac
+          if [[ "$MAINTAINER_CHANGES" != "false" ]]; then
+            exit 0
+          fi
+          case "$UPDATE_TYPE" in
+            version-update:semver-patch|version-update:semver-minor) ;;
+            *) exit 0 ;;
+          esac
+          gh pr merge --auto --squash --match-head-commit "$PR_HEAD_SHA" "$PR_URL"
+          echo "eligible=true" >> "$GITHUB_OUTPUT"
+      - name: Cancel automatic merges requiring manual review
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          METADATA_OUTCOME: ${{ steps.metadata.outcome }}
+          JOB_STATUS: ${{ job.status }}
+          QUEUE_OUTCOME: ${{ steps.enable-automerge.outcome }}
+          QUEUE_ELIGIBLE: ${{ steps.enable-automerge.outputs.eligible }}
+        run: |
+          # Only the complete successful eligibility decision may retain a queue.
+          if [[ "$JOB_STATUS" == "success" && "$METADATA_OUTCOME" == "success" &&
+                "$QUEUE_OUTCOME" == "success" && "$QUEUE_ELIGIBLE" == "true" ]]; then
+            exit 0
+          fi
+          echo "Update did not pass automatic merge eligibility; manual review is required."
+          auto_merge="$(gh pr view "$PR_URL" --json autoMergeRequest --jq '.autoMergeRequest != null')"
+          case "$auto_merge" in
+            true) gh pr merge --disable-auto "$PR_URL" ;;
+            false) ;;
+            *) echo "Cannot determine existing auto-merge state." >&2; exit 1 ;;
+          esac

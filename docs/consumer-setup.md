@@ -65,6 +65,8 @@ Keep major updates separate from minor/patch groups.
 
 Dependency auto-merge is a separate opt-in.
 The caller must configure effective strict rules, thread resolution, squash merge, and auto-merge.
+Serialize the privileged caller per pull request and set cancel-in-progress to false.
+The workflow revokes an earlier automatic merge request whenever the complete eligibility decision no longer succeeds.
 Keep the caller's target-event entrypoint and pin the shared workflow to reviewed code.
 Do not automatically approve dependency reviews.
 
