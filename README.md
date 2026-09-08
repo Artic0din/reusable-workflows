@@ -27,6 +27,7 @@ CodeQL eligibility and dependency auto-merge activation remain caller-owned.
 | Explicitly enabled CodeQL | [.github/workflows/codeql-analysis.yml](.github/workflows/codeql-analysis.yml) |
 | Verified, opt-in Dependabot auto-merge | [.github/workflows/dependabot-automerge.yml](.github/workflows/dependabot-automerge.yml) |
 | Redacted history secret scanning | [.github/workflows/secret-scan.yml](.github/workflows/secret-scan.yml) |
+| Current-commit Codex code-review completion | [.github/workflows/codex-review-gate.yml](.github/workflows/codex-review-gate.yml) |
 
 [validate-self.yml](.github/workflows/validate-self.yml) contains executable caller examples, including Python/npm and generated-output fixtures.
 [Consumer setup](docs/consumer-setup.md) covers external wiring, Copilot, Dependabot, updates, and rollback.

@@ -6,6 +6,7 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Added
 
+- Added a Codex completion status that waits for authenticated code-review evidence on the current pull-request commit.
 - Added an explicit repository rollout skill and a tested three-way update helper for tailored consumer skills.
 - Added configurable repository checks, Python/npm CI, generated-output verification, CodeQL, guarded dependency automation, and local setup examples.
 - Added README documentation, heading-preserving instruction refresh, workflow maintenance, and test-gap review skills.

@@ -1,0 +1,244 @@
+name: Reusable Codex review completion
+on:
+  workflow_call:
+    inputs:
+      pull-request-number:
+        description: Pull request whose current head must have completed Codex code review
+        type: number
+        required: true
+permissions: {}
+jobs:
+  review:
+    name: Refresh Codex completion status
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read  # Read authenticated review summaries and manual requests.
+      pull-requests: read  # Recheck the current PR head before publishing.
+      statuses: write  # Publish completion evidence without approving or merging.
+    steps:
+      - name: Check Codex completion
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pull-request-number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          from datetime import datetime, timezone
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import time
+
+          REPOSITORY = os.environ["REPOSITORY"]
+          PR_NUMBER = os.environ["PR_NUMBER"]
+          RUN_URL = os.environ["RUN_URL"]
+          STATUS_CONTEXT = "Codex review complete"
+          BOT_ID = 199175422
+          BOT_LOGIN = "chatgpt-codex-connector[bot]"
+          SUMMARY_MARKER = "<!-- codex-pull-request-review-summary -->"
+          TRUSTED_ASSOCIATIONS = {"OWNER", "MEMBER", "COLLABORATOR"}
+
+          def api(endpoint: str, payload: dict[str, str] | None = None, *, pages: bool = False) -> object:
+              command = ["gh", "api", endpoint]
+              if pages:
+                  command += ["--paginate", "--slurp"]
+              if payload is not None:
+                  command += ["--method", "POST", "--input", "-"]
+              attempts = 3 if payload is not None else 1
+              for attempt in range(attempts):
+                  try:
+                      result = subprocess.run(command, input=json.dumps(payload) if payload is not None else None,
+                                              text=True, capture_output=True, check=True,
+                                              timeout=15 if payload is not None else 60)
+                      return json.loads(result.stdout)
+                  except subprocess.SubprocessError:
+                      if attempt == attempts - 1:
+                          raise
+                      time.sleep(1)
+
+          def object_response(value: object) -> dict[str, object]:
+              if not isinstance(value, dict):
+                  raise ValueError("Expected a GitHub object response")
+              return value
+
+          def current_pull() -> dict[str, object]:
+              return object_response(api(f"repos/{REPOSITORY}/pulls/{PR_NUMBER}"))
+
+          def head_sha(pull: dict[str, object]) -> str:
+              sha = object_response(pull["head"])["sha"]
+              if not isinstance(sha, str) or not re.fullmatch(r"[a-f0-9]{40}", sha):
+                  raise ValueError("Invalid pull request head")
+              return sha
+
+          def timestamp(value: object) -> datetime:
+              if not isinstance(value, str):
+                  raise ValueError("Missing review timestamp")
+              parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+              if parsed.tzinfo is None:
+                  raise ValueError("Review timestamp has no timezone")
+              return parsed
+
+          def paginated_objects(endpoint: str) -> list[dict[str, object]]:
+              pages = api(endpoint, pages=True)
+              if not isinstance(pages, list) or any(not isinstance(page, list) for page in pages):
+                  raise ValueError("Invalid paginated GitHub response")
+              return [object_response(comment) for page in pages for comment in page]
+
+          def is_request(body: object) -> bool:
+              return bool(re.match(r"^\s*@codex\s+review\b", str(body), re.IGNORECASE))
+
+          def event_requested_at(event: dict[str, object]) -> datetime | None:
+              requests = []
+              comment = object_response(event.get("comment", {}))
+              changes = object_response(event.get("changes", {}))
+              previous_body = object_response(changes.get("body", {})).get("from")
+              if event.get("action") == "edited" and "base" in changes:
+                  requests.append(timestamp(object_response(event["pull_request"])["updated_at"]))
+              if (comment.get("author_association") in TRUSTED_ASSOCIATIONS
+                      and (is_request(comment.get("body")) or is_request(previous_body))):
+                  requests.append(timestamp(comment.get("updated_at", comment.get("created_at"))))
+              return max(requests) if requests else None
+
+          def requested_at(items: list[dict[str, object]], history: list[dict[str, object]],
+                           number: str, event_request: datetime | None) -> datetime | None:
+              requests = [timestamp(item.get("updated_at", item.get("created_at"))) for item in items
+                          if item.get("author_association") in TRUSTED_ASSOCIATIONS and is_request(item.get("body"))]
+              if event_request and number == PR_NUMBER:
+                  requests.append(event_request)
+              # Persisted metadata remains scoped to its PR even when several PRs share a commit.
+              for status in history:
+                  creator = status.get("creator")
+                  if (status.get("context") != STATUS_CONTEXT or not isinstance(creator, dict)
+                          or creator.get("id") != 41898282 or creator.get("login") != "github-actions[bot]"
+                          or creator.get("type") != "Bot"):
+                      continue
+                  marker = re.search(r"\[pr:" + number + r" request:([^\]]+)\]$", str(status.get("description", "")))
+                  if marker:
+                      requests.append(timestamp(marker[1]))
+              return max(requests) if requests else None
+
+          def is_summary(comment: dict[str, object]) -> bool:
+              user = comment.get("user")
+              return (isinstance(user, dict) and user.get("id") == BOT_ID
+                      and user.get("login") == BOT_LOGIN and user.get("type") == "Bot"
+                      and str(comment.get("body", "")).startswith(SUMMARY_MARKER))
+
+          def review_state(items: list[dict[str, object]], sha: str,
+                           requested: datetime | None) -> tuple[str, str, str]:
+              summaries = [item for item in items if is_summary(item)]
+              if not summaries:
+                  return "pending", "Waiting for Codex code review", RUN_URL
+              summary = max(summaries, key=lambda item: (timestamp(item["updated_at"]), int(item["id"])))
+              rows = [line.split("|") for line in str(summary["body"]).splitlines()
+                      if line.startswith("|") and "**Code Review**" in line.split("|")[1]]
+              if not rows:
+                  return "pending", "Waiting for Codex code review", RUN_URL
+              if len(rows) != 1 or len(rows[0]) < 5:
+                  raise ValueError("Invalid Codex code-review row")
+              row = rows[0]
+              url = str(summary["html_url"])
+              prefix = re.fullmatch(r"\s*`([a-f0-9]{7,40})`\s*", row[3])
+              if not prefix or not sha.startswith(prefix[1]):
+                  return "pending", "Waiting for Codex to review the current commit", url
+              states = re.findall(r"\*\*([A-Za-z ]+)\*\*", row[2])
+              if len(states) != 1:
+                  raise ValueError("Ambiguous Codex review status")
+              if states[0] == "Running":
+                  return "pending", "Codex code review is running", url
+              if states[0] != "Completed":
+                  return "failure", "Codex code review has not completed successfully", url
+              reviewed = re.search(r'<relative-time datetime="([^"]+)">', row[2])
+              if not reviewed:
+                  raise ValueError("Missing Codex completion timestamp")
+              completed_at = timestamp(reviewed[1])
+              # Comment timestamps have second precision; same-second ordering is unknowable.
+              if requested and completed_at.replace(microsecond=0) <= requested.replace(microsecond=0):
+                  return "pending", "Waiting for the requested Codex review", url
+              # Resolve Codex's abbreviated display SHA before accepting it as current-head evidence.
+              resolved = object_response(api(f"repos/{REPOSITORY}/commits/{prefix[1]}"))
+              if resolved.get("sha") != sha:
+                  raise ValueError("Codex review commit does not resolve to the current head")
+              return "success", "Codex code review completed on the current commit", url
+
+          def publish(sha: str, state: str, description: str, url: str = RUN_URL,
+                      requested: datetime | None = None, number: str = PR_NUMBER) -> None:
+              if requested:
+                  stamp = requested.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+                  description += f" [pr:{number} request:{stamp}]"
+              api(f"repos/{REPOSITORY}/statuses/{sha}", {
+                  "context": STATUS_CONTEXT, "state": state,
+                  "description": description, "target_url": url,
+              })
+
+          def pull_identity(pull: dict[str, object]) -> tuple[object, ...]:
+              base = object_response(pull["base"])
+              repository = object_response(base["repo"])["full_name"]
+              if not isinstance(base["ref"], str) or not base["ref"] or not isinstance(repository, str):
+                  raise ValueError("Invalid pull request base")
+              return pull["number"], head_sha(pull), base["ref"], repository, pull["draft"], pull["state"]
+
+          def open_head_pulls(sha: str) -> dict[str, dict[str, object]]:
+              pulls = paginated_objects(f"repos/{REPOSITORY}/pulls?state=open&per_page=100")
+              return {str(pull["number"]): pull for pull in pulls if pull["state"] == "open" and head_sha(pull) == sha}
+
+          def completion_for_pull(pull: dict[str, object], sha: str, history: list[dict[str, object]],
+                                  event_request: datetime | None) -> tuple[str, str, str]:
+              number = str(pull["number"])
+              if pull["draft"]:
+                  return "pending", f"PR #{number} is still a draft", RUN_URL
+              items = paginated_objects(f"repos/{REPOSITORY}/issues/{number}/comments?per_page=100")
+              requested = requested_at(items, history, number, event_request)
+              if requested:
+                  publish(sha, "pending", "Verifying requested Codex review", requested=requested, number=number)
+              state, description, url = review_state(items, sha, requested)
+              return state, f"PR #{number}: {description}", url
+
+          def refresh(pull: dict[str, object], sha: str, requested: datetime | None) -> None:
+              pulls = open_head_pulls(sha)
+              if not pulls:
+                  return
+              if pull["state"] == "open" and head_sha(pull) == sha and (PR_NUMBER not in pulls
+                      or pull_identity(pulls[PR_NUMBER]) != pull_identity(pull)):
+                  return
+              before = {number: pull_identity(item) for number, item in pulls.items()}
+              history = paginated_objects(f"repos/{REPOSITORY}/commits/{sha}/statuses?per_page=100")
+              outcomes = [completion_for_pull(item, sha, history, requested) for item in pulls.values()]
+              after = {number: pull_identity(item) for number, item in open_head_pulls(sha).items()}
+              if before != after:
+                  return
+              state, description, url = next((item for item in outcomes if item[0] != "success"),
+                                            ("success", "Codex code review completed for all PRs on this commit", RUN_URL))
+              publish(sha, state, description, url)
+
+          def refresh_commit(pull: dict[str, object], sha: str, requested: datetime | None) -> None:
+              try:
+                  if (pull["state"] != "open" or head_sha(pull) != sha) and not open_head_pulls(sha):
+                      return
+                  # Persist event-only evidence before draft exits or fallible list/comment reads.
+                  publish(sha, "pending", "Verifying current-commit Codex review", requested=requested)
+                  refresh(pull, sha, requested)
+              except (KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError):
+                  publish(sha, "error", "Unable to verify Codex review; refresh the gate after fixing the error",
+                          requested=requested)
+                  raise
+
+          def main() -> None:
+              if not re.fullmatch(r"[1-9][0-9]*", PR_NUMBER):
+                  raise ValueError("Pull request number must be a positive integer")
+              pull = current_pull()
+              event = object_response(json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text()))
+              sha = head_sha(pull)
+              refresh_commit(pull, sha, event_requested_at(event))
+              previous = event.get("before")
+              if event.get("action") == "synchronize" and previous != sha:
+                  if not isinstance(previous, str) or not re.fullmatch(r"[a-f0-9]{40}", previous):
+                      raise ValueError("Invalid previous pull request head")
+                  refresh_commit(pull, previous, None)
+
+          main()
+          PY
