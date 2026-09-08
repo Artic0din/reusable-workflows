@@ -11,7 +11,7 @@ The executable local calls in [validate-self.yml](../.github/workflows/validate-
 The external pilot is maintained as a separate consumer pull request.
 A public library can be called from public or private projects when their Actions policy permits it.
 
-This complete caller uses the initial implementation revision and a minimal file baseline.
+This complete caller uses the v1.0.0 release revision and a minimal file baseline.
 Change the required file list to match the consumer, and review newer library revisions before adopting them.
 
 ```yaml
@@ -24,7 +24,7 @@ permissions:
   contents: read
 jobs:
   baseline:
-    uses: Artic0din/reusable-workflows/.github/workflows/baseline.yml@c29d127ba7c6b01a07e94cd16af76761a29b7a90
+    uses: Artic0din/reusable-workflows/.github/workflows/baseline.yml@c913ad3e22a42c75bfcf0029448cda48dc546ff1  # v1.0.0
     with:
       required-files: README.md, .gitignore
 ```
@@ -49,12 +49,17 @@ README work uses readme-docs and optionally the linked readme-specialist agent.
 Instruction accuracy uses refresh-instructions and preserves existing heading structure.
 The GitHub Actions skill contains library-specific references; rebuild its commands from the caller's actual workflows rather than copying it unchanged.
 Existing strong project instructions should be retained.
+Record selected source files and their original revision in the consumer's .github/reusable-skills.json.
+Use [skill updates](skill-updates.md) and the [rollout skill](../.github/skills/rollout-repositories/SKILL.md) to prepare later update PRs while preserving local adaptations.
 
 ## Dependency maintenance
 
 Keep a local Dependabot github-actions entry so external reusable-workflow references receive updates.
 Use release-associated SHAs with same-line version comments once releases exist.
 Review workflow changes and any embedded validation-tool pin updates together.
+Update matching version prose and workflow-contract links in consumer guides and skills in the same PR, including Dependabot PRs.
+Keep copied-skill manifest revisions unchanged for workflow-only updates; those revisions record the skills' merge bases.
+Exclude shared-workflow updates from existing dependency auto-merge paths until they receive the required review and validation.
 Configure only the package ecosystems that exist in the caller.
 Keep major updates separate from minor/patch groups.
 
