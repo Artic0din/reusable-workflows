@@ -64,6 +64,12 @@ jobs:
         env:
           REQUIREMENTS: ${{ inputs.python-requirements }}
         run: python -m pip install --require-hashes -r "$REQUIREMENTS"
+      - name: Set up Node
+        if: inputs.npm
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version-file: ${{ inputs.node-version-file }}
+          package-manager-cache: false
       - name: Run Python tests
         if: inputs.python
         env:
@@ -81,12 +87,6 @@ jobs:
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           sys.exit(not result.wasSuccessful())
           PY
-      - name: Set up Node
-        if: inputs.npm
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
-        with:
-          node-version-file: ${{ inputs.node-version-file }}
-          package-manager-cache: false
       - name: Install npm dependencies
         if: inputs.npm
         working-directory: ${{ inputs.npm-directory }}
@@ -96,10 +96,10 @@ jobs:
         working-directory: ${{ inputs.npm-directory }}
         env:
           BUILD_SCRIPT: ${{ inputs.npm-build-script }}
-        run: npm run "$BUILD_SCRIPT"
+        run: npm run -- "$BUILD_SCRIPT"
       - name: Run npm tests
         if: inputs.npm
         working-directory: ${{ inputs.npm-directory }}
         env:
           TEST_SCRIPT: ${{ inputs.npm-test-script }}
-        run: npm run "$TEST_SCRIPT"
+        run: npm run -- "$TEST_SCRIPT"

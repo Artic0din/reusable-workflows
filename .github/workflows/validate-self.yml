@@ -15,10 +15,12 @@ jobs:
     name: Baseline caller
     uses: ./.github/workflows/baseline.yml  # zizmor: ignore[self-repository]
   python:
-    name: Python caller
+    name: Python/npm caller
     uses: ./.github/workflows/ci.yml  # zizmor: ignore[self-repository]
     with:
       python-requirements: requirements-dev.txt
+      npm: true
+      npm-directory: tests/fixtures/npm
   npm:
     name: npm caller
     uses: ./.github/workflows/ci.yml  # zizmor: ignore[self-repository]

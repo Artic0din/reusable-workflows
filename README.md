@@ -46,7 +46,7 @@ Do not copy this repository's entire agent policy over a project's instructions.
 
 ## Development
 
-Use the Python version declared in .python-version:
+Use the Python version declared in .python-version and Node from .node-version:
 
 ```sh
 python3 -m venv .venv
@@ -60,7 +60,7 @@ python3 -m venv .venv
 
 Run actionlint at the version pinned in [.github/actions/actionlint/Dockerfile](.github/actions/actionlint/Dockerfile), then git diff --check.
 Tests require Git, Bash, and jq on PATH.
-Node from .node-version is needed for the npm consumer fixture.
+Node and npm are required for the script-invocation regressions and the npm consumer fixture.
 Local tests do not prove GitHub permissions, successful CodeQL uploads, or live dependency merges.
 
 ## Contributing

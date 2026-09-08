@@ -1,5 +1,6 @@
 """Run the actual workflow shell steps against isolated consumer repositories."""
 import os
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -117,6 +118,59 @@ class WorkflowContractTests(unittest.TestCase):
                  "commit -qm symlink", self.root)
         script = workflow_step("check-dist.yml", "Validate output directory")
         self.assertNotEqual(run_step(script, self.root, OUTPUT_PATH="alias").returncode, 0)
+
+    def test_nested_generated_symlinks_are_rejected_before_and_after_build(self) -> None:
+        self.initialize_output()
+        (self.root / "assets").mkdir()
+        (self.root / "assets/icon.txt").write_text("original\n")
+        link = self.root / "dist/assets"
+        link.symlink_to("../assets", target_is_directory=True)
+        result = run_step("git add . && git -c user.name=Fixture -c user.email=fixture@example.invalid "
+                          "commit -qm nested-link", self.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        (link / "icon.txt").write_text("changed through symlink\n")
+        for name in ("Validate output directory", "Revalidate output directory"):
+            with self.subTest(step=name):
+                result = run_step(workflow_step("check-dist.yml", name), self.root, OUTPUT_PATH="dist")
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_build_cannot_introduce_directory_file_or_dangling_symlinks(self) -> None:
+        self.initialize_output()
+        workflow = yaml.safe_load((ROOT / ".github/workflows/check-dist.yml").read_text())
+        steps = workflow["jobs"]["generated"]["steps"]
+        build_index = next(index for index, step in enumerate(steps) if step["name"] == "Regenerate output")
+        post_build = "\n".join(step["run"] for step in steps[build_index + 1:])
+        for target in ("../dist", "../.gitignore", "../missing"):
+            with self.subTest(target=target):
+                self.assertEqual(run_step(workflow_step("check-dist.yml", "Validate output directory"),
+                                          self.root, OUTPUT_PATH="dist").returncode, 0)
+                link = self.root / "dist/link"
+                link.symlink_to(target)
+                try:
+                    result = run_step(post_build, self.root, OUTPUT_PATH="dist")
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("nested symlinks", result.stderr)
+                finally:
+                    link.unlink()
+
+    def test_npm_script_names_cannot_be_interpreted_as_options(self) -> None:
+        (self.root / "script.cjs").write_text("require('fs').writeFileSync('executed', 'yes');\n")
+        for filename, step_name, variable in (
+            ("ci.yml", "Run npm tests", "TEST_SCRIPT"),
+            ("ci.yml", "Build npm project", "BUILD_SCRIPT"),
+            ("check-dist.yml", "Regenerate output", "BUILD_SCRIPT"),
+        ):
+            script = workflow_step(filename, step_name)
+            for name in ("test", "--help", "--version", "--silent"):
+                with self.subTest(step=step_name, script=name):
+                    (self.root / "package.json").write_text(json.dumps({"scripts": {name: "node script.cjs"}}))
+                    result = run_step(script, self.root, **{variable: name})
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertTrue((self.root / "executed").exists(), result.stdout)
+                    (self.root / "executed").unlink()
+                    (self.root / "package.json").write_text('{"scripts": {}}')
+                    result = run_step(script, self.root, **{variable: name})
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
 
 
 if __name__ == "__main__":

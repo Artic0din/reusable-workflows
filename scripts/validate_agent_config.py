@@ -3,12 +3,14 @@ import argparse
 import os
 from pathlib import Path, PurePosixPath
 import re
+import string
 from urllib.parse import unquote, urlsplit
 
 import yaml
 
 EXCLUDED_DIRECTORIES = {".git", ".venv", "node_modules", "__pycache__"}
-LINK = re.compile(r"\[[^\]]*\]\((?:<([^>]+)>|([^\s)]+))(?:\s+[^)]*)?\)")
+LINK = re.compile(r"\[[^\]]*\]\(\s*")
+LINK_END = re.compile(r"""(?:\s+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^)\\])*\)))?\s*\)""")
 CHARACTER_CLASS = re.compile(r"\[(?:[!^])?\]?[^]]*\]")
 
 
@@ -35,6 +37,38 @@ def without_fences(text: str) -> str:
         if not fence:
             lines.append(line)
     return "\n".join(lines)
+
+
+def link_destinations(text: str) -> list[str]:
+    destinations = []
+    for match in LINK.finditer(text):
+        index = match.end()
+        angled = text[index:index + 1] == "<"
+        index += angled
+        closed = not angled
+        depth = 0
+        characters = []
+        while index < len(text):
+            character = text[index]
+            if character == "\\" and index + 1 < len(text) and text[index + 1] in string.punctuation:
+                characters.append(text[index + 1])
+                index += 2
+                continue
+            if angled and character == ">":
+                closed = True
+                index += 1
+                break
+            if character == "\n" or (not angled and character.isspace()):
+                break
+            if not angled:
+                if character == ")" and depth == 0:
+                    break
+                depth += (character == "(") - (character == ")")
+            characters.append(character)
+            index += 1
+        if closed and depth == 0 and LINK_END.match(text, index):
+            destinations.append("".join(characters))
+    return destinations
 
 
 def scope_patterns(scope: str) -> list[str]:
@@ -113,8 +147,7 @@ def validate(root: Path) -> list[str]:
             continue
         if path.name not in {"AGENTS.md", "copilot-instructions.md"}:
             errors.extend(f"{label}: {error}" for error in metadata_errors(path, text, relative_files))
-        for match in LINK.finditer(without_fences(text)):
-            destination = match.group(1) or match.group(2)
+        for destination in link_destinations(without_fences(text)):
             parsed = urlsplit(destination)
             if parsed.scheme or parsed.netloc or not parsed.path:
                 continue

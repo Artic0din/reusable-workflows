@@ -32,7 +32,7 @@ jobs:
       - name: Validate output directory
         env:
           OUTPUT_PATH: ${{ inputs.output-path }}
-        run: |
+        run: &validate-output |
           python - <<'PY'
           import os
           from pathlib import Path
@@ -45,6 +45,8 @@ jobs:
               raise SystemExit("output-path cannot contain symlinks or parent traversal.")
           if not target.is_dir():
               raise SystemExit("The generated directory must exist before building.")
+          if any(path.is_symlink() for path in target.rglob("*")):
+              raise SystemExit("The generated directory cannot contain nested symlinks.")
           PY
           GIT_LITERAL_PATHSPECS=1 git ls-files --error-unmatch -- "$OUTPUT_PATH" > /dev/null
       - name: Set up Node
@@ -59,7 +61,11 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         env:
           BUILD_SCRIPT: ${{ inputs.build-script }}
-        run: npm run "$BUILD_SCRIPT"
+        run: npm run -- "$BUILD_SCRIPT"
+      - name: Revalidate output directory
+        env:
+          OUTPUT_PATH: ${{ inputs.output-path }}
+        run: *validate-output
       - name: Verify generated output is unchanged
         env:
           OUTPUT_PATH: ${{ inputs.output-path }}

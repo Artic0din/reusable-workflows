@@ -74,6 +74,17 @@ class AgentConfigurationTests(unittest.TestCase):
                    "---\ndescription: Code\napplyTo: 'src/[a,b].py,src/a.py'\n---\n")
         self.assertEqual(validate(self.root), [])
 
+    def test_balanced_parentheses_and_escaped_link_destinations(self) -> None:
+        for filename in ("API(v2).md", "API(v2(beta)).md", "API)v2.md", "API v2.md"):
+            self.write(filename, "# API\n")
+        self.write("AGENTS.md", '[guide](API(v2).md)\n[nested](API(v2(beta)).md "API title")\n'
+                   '[escaped](API\\)v2.md)\n[angle](<API v2.md>)\n')
+        self.assertEqual(validate(self.root), [])
+        self.write("AGENTS.md", "[missing](Missing(v2).md)\n")
+        errors = validate(self.root)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("Missing(v2).md", errors[0])
+
 
 if __name__ == "__main__":
     unittest.main()
