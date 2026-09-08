@@ -105,12 +105,15 @@ The public workflow source must be pinned to a reviewed full commit SHA in the c
 The workflow publishes the commit-status context `Codex review complete`.
 Require this exact context from GitHub Actions after verifying a real consumer run; the workflow job's own success is not the completion signal.
 Missing, running or stale code-review evidence stays pending.
-Failed, cancelled, unknown or malformed evidence cannot pass, and API failures leave an error or pending status.
+Failed, cancelled, unknown or malformed evidence cannot pass.
+Status writes retry transient failures; verification errors attempt to publish an error status, including when the initial pending write fails.
 Completed review passes only after its abbreviated commit resolves through GitHub to the full current head and the head is rechecked before publication.
 Only the authenticated `chatgpt-codex-connector[bot]` account, including its numeric account ID and bot type, can supply evidence.
 The separate Security Review row cannot satisfy Code Review completion.
 The latest summary and all pages of comments are considered.
 An owner, member or collaborator's newer `@codex review` request invalidates older completion evidence.
+Edited requests use their edit time, and the triggering event preserves a request even if its comment is removed.
+The latest request timestamp is retained in authenticated GitHub Actions status descriptions for that PR and commit, so later refreshes cannot forget a deleted request.
 Untrusted commenters cannot hold the gate by posting review requests that Codex would not honor.
 
 Keep required review-conversation resolution enabled independently: completed code review can contain findings and does not mean approval.
@@ -123,6 +126,7 @@ Also handle created, edited and deleted issue_comment events on pull requests wh
 Include workflow_dispatch with a required pull-request-number input to initialize existing PRs and recover missed events.
 Comment events load the caller from its default branch, so merge the caller before relying on them.
 GitHub event delivery, runner startup, and status publication are asynchronous: a same-commit manual re-review has a short propagation window before its pending status appears.
+If GitHub's API remains unavailable, no workflow can replace an already-published status; the failed run must be retried after service recovers.
 A new commit has no successful status until its own completion is verified.
 Status contexts are commit-scoped, as with other required GitHub status checks.
 

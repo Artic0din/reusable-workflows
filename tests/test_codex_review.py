@@ -36,13 +36,17 @@ def request(*, association: str = "OWNER", created_at: str = "2026-09-09T02:00:0
 class CodexReviewGateTests(unittest.TestCase):
     def run_gate(self, comments: object, *, resolved_sha: str = HEAD,
                  later_head: str = HEAD, fail_comments: bool = False,
-                 draft: bool = False, state: str = "open") -> tuple[subprocess.CompletedProcess[str], list]:
+                 draft: bool = False, state: str = "open", fail_statuses: int = 0,
+                 event: dict | None = None, previous_statuses: list | None = None
+                 ) -> tuple[subprocess.CompletedProcess[str], list]:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             fixture = {"comments": comments, "resolved_sha": resolved_sha,
                        "later_head": later_head, "fail_comments": fail_comments,
-                       "draft": draft, "state": state}
+                       "draft": draft, "state": state, "fail_statuses": fail_statuses,
+                       "previous_statuses": previous_statuses or []}
             (root / "fixture.json").write_text(json.dumps(fixture))
+            (root / "event.json").write_text(json.dumps(event or {}))
             fake = root / "gh"
             fake.write_text("""#!/usr/bin/env python3
 import json, os, pathlib, sys
@@ -51,8 +55,14 @@ fixture = json.loads((root / 'fixture.json').read_text())
 args = sys.argv[1:]
 endpoint = next(arg for arg in args if arg.startswith('repos/'))
 if '/statuses/' in endpoint:
+    counter = root / 'status-count'
+    count = int(counter.read_text()) if counter.exists() else 0
+    counter.write_text(str(count + 1))
+    if count < fixture['fail_statuses']:
+        sys.exit(1)
     payload = json.load(sys.stdin)
     payload['sha'] = endpoint.rsplit('/', 1)[1]
+    payload['creator'] = {'id': 41898282, 'login': 'github-actions[bot]', 'type': 'Bot'}
     with (root / 'statuses.jsonl').open('a') as output:
         output.write(json.dumps(payload) + '\\n')
     print('{}')
@@ -67,6 +77,8 @@ elif '/comments?' in endpoint:
     if fixture['fail_comments']:
         sys.exit(1)
     print(json.dumps(fixture['comments']))
+elif '/statuses?' in endpoint:
+    print(json.dumps([fixture['previous_statuses']]))
 elif '/commits/' in endpoint:
     print(json.dumps({'sha': fixture['resolved_sha']}))
 else:
@@ -75,6 +87,7 @@ else:
             fake.chmod(0o700)
             environment = dict(os.environ, PATH=f'{root}{os.pathsep}{os.environ["PATH"]}',
                                FIXTURES=str(root), REPOSITORY="fixture/repo", PR_NUMBER="1",
+                               GITHUB_EVENT_PATH=str(root / "event.json"),
                                RUN_URL="https://github.com/fixture/repo/actions/runs/1")
             result = subprocess.run(
                 ["bash", "-euo", "pipefail", "-c", workflow_step("codex-review-gate.yml", "Check Codex completion")],
@@ -124,6 +137,44 @@ else:
         self.assertEqual(statuses[-1]["state"], "success")
         _, statuses = self.run_gate([[summary(reviewed_at="2026-09-09T03:00:00Z"), request()]])
         self.assertEqual(statuses[-1]["state"], "success")
+
+    def test_edited_request_uses_the_edit_time(self) -> None:
+        edited = request(created_at="2026-09-08T00:00:00Z")
+        edited["updated_at"] = "2026-09-09T02:00:00Z"
+        _, statuses = self.run_gate([[summary(), edited]])
+        self.assertEqual(statuses[-1]["state"], "pending")
+
+    def test_deleted_request_survives_later_refreshes_until_review_completes(self) -> None:
+        event = {"action": "deleted", "comment": request()}
+        result, statuses = self.run_gate([[summary()]], event=event)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(statuses[-1]["state"], "pending")
+        _, later = self.run_gate([[summary()]], previous_statuses=statuses)
+        self.assertEqual(later[-1]["state"], "pending")
+        _, completed = self.run_gate([[summary(reviewed_at="2026-09-09T03:00:00Z")]],
+                                     previous_statuses=later)
+        self.assertEqual(completed[-1]["state"], "success")
+
+    def test_editing_away_request_and_spoofed_request_history(self) -> None:
+        edited = request()
+        edited["body"] = "Request removed"
+        event = {"action": "edited", "comment": edited,
+                 "changes": {"body": {"from": "@codex review"}}}
+        _, statuses = self.run_gate([[summary()]], event=event)
+        self.assertEqual(statuses[-1]["state"], "pending")
+        for key, value in (("id", 1), ("login", "other[bot]"), ("type", "User")):
+            forged = copy.deepcopy(statuses[-1])
+            forged["creator"][key] = value
+            _, later = self.run_gate([[summary()]], previous_statuses=[forged])
+            self.assertEqual(later[-1]["state"], "success")
+
+    def test_transient_initial_status_failure_retries_and_can_fail_closed(self) -> None:
+        result, statuses = self.run_gate([[summary()]], fail_statuses=1)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([item["state"] for item in statuses], ["pending", "success"])
+        result, statuses = self.run_gate([[summary()]], fail_statuses=3)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(statuses[-1]["state"], "error")
 
     def test_latest_summary_and_every_page_are_considered(self) -> None:
         old = summary(status="Running")
