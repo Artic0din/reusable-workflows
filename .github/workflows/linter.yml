@@ -1,0 +1,69 @@
+name: Reusable workflow validation
+on:
+  workflow_call:
+    inputs:
+      tooling-ref:
+        description: Full commit SHA of this library, matching the reusable-workflow reference
+        type: string
+        required: true
+      yaml-paths:
+        description: Newline-separated YAML files or directories in the caller repository
+        type: string
+        default: .github
+      yaml-config:
+        description: Caller-owned yamllint configuration
+        type: string
+        default: .yamllint.yml
+      validate-agent-config:
+        description: Check agent metadata, local links, and instruction scopes
+        type: boolean
+        default: true
+permissions:
+  contents: read
+jobs:
+  lint:
+    name: Workflow validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Validate immutable tooling reference
+        env:
+          TOOLING_REF: ${{ inputs.tooling-ref }}
+        run: '[[ "$TOOLING_REF" =~ ^[0-9a-f]{40}$ ]]'
+      - name: Check out caller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          path: source
+          persist-credentials: false
+      - name: Check out versioned validation tools
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: Artic0din/reusable-workflows
+          ref: ${{ inputs.tooling-ref }}
+          path: automation
+          persist-credentials: false
+      - name: Set up validation Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version-file: automation/.python-version
+      - name: Install locked validation tools
+        run: python -m pip install --require-hashes -r automation/requirements-dev.txt
+      - name: Validate caller YAML
+        working-directory: source
+        env:
+          YAML_PATHS: ${{ inputs.yaml-paths }}
+          YAML_CONFIG: ${{ inputs.yaml-config }}
+        run: |
+          mapfile -t paths < <(printf '%s\n' "$YAML_PATHS")
+          yamllint --strict -c "$YAML_CONFIG" -- "${paths[@]}"
+      - name: Check workflow security
+        working-directory: source
+        run: zizmor --offline --pedantic .github
+      - name: Check workflow syntax
+        run: |
+          docker build --tag reusable-actionlint automation/.github/actions/actionlint
+          docker run --rm --mount "type=bind,source=$GITHUB_WORKSPACE/source,target=/src,readonly" \
+            --workdir /src reusable-actionlint -color
+      - name: Validate agent configuration
+        if: inputs.validate-agent-config
+        run: python automation/scripts/validate_agent_config.py source

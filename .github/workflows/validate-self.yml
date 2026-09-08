@@ -1,0 +1,97 @@
+# Relative calls retain compatibility with the pinned actionlint release.
+name: Validate reusable workflows
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  baseline:
+    name: Baseline caller
+    uses: ./.github/workflows/baseline.yml  # zizmor: ignore[self-repository]
+  python:
+    name: Python caller
+    uses: ./.github/workflows/ci.yml  # zizmor: ignore[self-repository]
+    with:
+      python-requirements: requirements-dev.txt
+  npm:
+    name: npm caller
+    uses: ./.github/workflows/ci.yml  # zizmor: ignore[self-repository]
+    with:
+      python: false
+      npm: true
+      npm-directory: tests/fixtures/npm
+      npm-build-script: build
+  generated:
+    name: Generated-output caller
+    uses: ./.github/workflows/check-dist.yml  # zizmor: ignore[self-repository]
+    with:
+      output-path: tests/fixtures/npm/dist
+      working-directory: tests/fixtures/npm
+  workflows:
+    name: Workflow-validation caller
+    uses: ./.github/workflows/linter.yml  # zizmor: ignore[self-repository]
+    with:
+      tooling-ref: ${{ github.sha }}
+  secrets:
+    name: Secret-scan caller
+    uses: ./.github/workflows/secret-scan.yml  # zizmor: ignore[self-repository]
+  codeql:
+    name: CodeQL caller
+    permissions:
+      contents: read
+      actions: read  # CodeQL reads caller workflow-run metadata.
+      security-events: write  # Authorize this explicitly requested public-repository scan.
+    uses: ./.github/workflows/codeql-analysis.yml  # zizmor: ignore[self-repository]
+    with:
+      enabled: true
+      languages: '["actions","python"]'
+  source:
+    name: Source validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version-file: .python-version
+      - name: Install locked tools
+        run: python -m pip install --require-hashes -r requirements-dev.txt
+      - name: Check source correctness
+        run: ruff check scripts tests
+      - name: Install scanner for its history regression
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import subprocess
+          import yaml
+          workflow = yaml.safe_load(Path(".github/workflows/secret-scan.yml").read_text())
+          installer = next(step for step in workflow["jobs"]["secrets"]["steps"]
+                           if step["name"] == "Install verified Gitleaks release")
+          subprocess.run(["bash", "-euo", "pipefail", "-c", installer["run"]],
+                         env=os.environ | installer["env"], check=True)
+          with Path(os.environ["GITHUB_PATH"]).open("a") as path:
+              path.write(os.environ["RUNNER_TEMP"] + "\n")
+          PY
+      - name: Verify merge-only secret detection
+        run: python -m unittest discover -s tests -p test_secret_scan.py -v
+      - name: Verify missing-file rejection
+        id: missing
+        continue-on-error: true  # The following step requires this intentional negative case to fail.
+        uses: chrisreddington/validate-file-exists@ff1ba041fbaa672eeb84a53b8c33ffd381c080f2  # v0.0.10
+        with:
+          required-files: tests/fixtures/intentionally-absent-file
+      - name: Require missing-file failure
+        env:
+          MISSING_RESULT: ${{ steps.missing.outcome }}
+        run: test "$MISSING_RESULT" = failure
