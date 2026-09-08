@@ -41,7 +41,16 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
                 "with (root / 'calls').open('a') as out:\n"
                 "    out.write(json.dumps(args) + '\\n')\n"
                 "if args[:2] == ['pr', 'view']:\n"
-                "    print(os.environ['GH_AUTO_STATE'])\n"
+                "    state = os.environ['GH_AUTO_STATE']\n"
+                "    if '--jq' in args:\n"
+                "        print(state)\n"
+                "    else:\n"
+                "        request = {} if state == 'true' else None if state == 'false' else state\n"
+                "        print(json.dumps({'autoMergeRequest': request,\n"
+                "            'headRefOid': os.environ.get('GH_LIVE_HEAD', os.environ['PR_HEAD_SHA']),\n"
+                "            'author': {'login': os.environ.get('GH_LIVE_AUTHOR', 'app/dependabot'), 'is_bot': True},\n"
+                "            'isCrossRepository': os.environ.get('GH_LIVE_CROSS', 'false') == 'true',\n"
+                "            'state': os.environ.get('GH_LIVE_STATE', 'OPEN')}))\n"
                 "    sys.exit(int(os.environ['GH_READ_EXIT']))\n"
                 "if args[:2] == ['pr', 'merge']:\n"
                 "    key = 'GH_CANCEL_EXIT' if '--disable-auto' in args else 'GH_MERGE_EXIT'\n"
@@ -216,10 +225,26 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
         self.assertEqual(
             calls,
             [
-                ["pr", "view", PR_URL, "--json", "autoMergeRequest", "--jq", ".autoMergeRequest != null"],
+                ["pr", "view", PR_URL, "--json", "autoMergeRequest,headRefOid,author,isCrossRepository,state"],
                 ["pr", "merge", "--disable-auto", PR_URL],
             ],
         )
+
+    def test_stale_events_do_not_cancel_current_merge_requests(self) -> None:
+        for values in (
+            {"GH_LIVE_HEAD": "b" * 40},
+            {"GH_LIVE_AUTHOR": "human"},
+            {"GH_LIVE_CROSS": "true"},
+            {"GH_LIVE_STATE": "CLOSED"},
+        ):
+            with self.subTest(values=values):
+                queue, cleanup, calls = self.run_policy(
+                    {"RUN_INITIAL": "true", "METADATA_OUTCOME": "skipped", **values}
+                )
+                self.assertIsNone(queue)
+                self.assertEqual(cleanup.returncode, 0, cleanup.stderr)
+                self.assertEqual(len(calls), 2, calls)
+                self.assertTrue(all(call[:2] == ["pr", "view"] for call in calls), calls)
 
     def test_previous_request_is_cleared_before_verification(self) -> None:
         workflow = yaml.safe_load((ROOT / ".github/workflows/dependabot-automerge.yml").read_text())

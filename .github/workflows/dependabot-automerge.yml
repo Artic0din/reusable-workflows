@@ -30,14 +30,29 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          if ! auto_merge="$(gh pr view "$PR_URL" --json autoMergeRequest --jq '.autoMergeRequest != null')"; then
+          if ! pr_state="$(gh pr view "$PR_URL" --json autoMergeRequest,headRefOid,author,isCrossRepository,state)"; then
             echo "Cannot read existing auto-merge state." >&2
             exit 1
           fi
+          auto_merge="$(jq -er --arg head "$PR_HEAD_SHA" '
+            if (.headRefOid | type) != "string" or (.author.login | type) != "string" or
+               (.author.is_bot | type) != "boolean" or (.isCrossRepository | type) != "boolean" or
+               (.state | type) != "string" or (has("autoMergeRequest") | not)
+            then error("Malformed pull request state")
+            elif .headRefOid != $head or .author.login != "app/dependabot" or
+                 .author.is_bot != true or .isCrossRepository != false or .state != "OPEN"
+            then "stale"
+            elif .autoMergeRequest == null then "false"
+            elif (.autoMergeRequest | type) == "object" then "true"
+            else error("Malformed automatic merge state")
+            end
+          ' <<< "$pr_state")"
           case "$auto_merge" in
             true) gh pr merge --disable-auto "$PR_URL" ;;
             false) ;;
+            stale) echo "Skipping cancellation for a stale event or changed pull request identity." ;;
             *) echo "Cannot determine existing auto-merge state." >&2; exit 1 ;;
           esac
       - name: Verify current merge eligibility
@@ -123,6 +138,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           METADATA_OUTCOME: ${{ steps.metadata.outcome }}
           JOB_STATUS: ${{ job.status }}
           QUEUE_OUTCOME: ${{ steps.enable-automerge.outcome }}
@@ -134,12 +150,26 @@ jobs:
             exit 0
           fi
           echo "Update did not pass automatic merge eligibility; manual review is required."
-          if ! auto_merge="$(gh pr view "$PR_URL" --json autoMergeRequest --jq '.autoMergeRequest != null')"; then
+          if ! pr_state="$(gh pr view "$PR_URL" --json autoMergeRequest,headRefOid,author,isCrossRepository,state)"; then
             echo "Cannot read existing auto-merge state." >&2
             exit 1
           fi
+          auto_merge="$(jq -er --arg head "$PR_HEAD_SHA" '
+            if (.headRefOid | type) != "string" or (.author.login | type) != "string" or
+               (.author.is_bot | type) != "boolean" or (.isCrossRepository | type) != "boolean" or
+               (.state | type) != "string" or (has("autoMergeRequest") | not)
+            then error("Malformed pull request state")
+            elif .headRefOid != $head or .author.login != "app/dependabot" or
+                 .author.is_bot != true or .isCrossRepository != false or .state != "OPEN"
+            then "stale"
+            elif .autoMergeRequest == null then "false"
+            elif (.autoMergeRequest | type) == "object" then "true"
+            else error("Malformed automatic merge state")
+            end
+          ' <<< "$pr_state")"
           case "$auto_merge" in
             true) gh pr merge --disable-auto "$PR_URL" ;;
             false) ;;
+            stale) echo "Skipping cancellation for a stale event or changed pull request identity." ;;
             *) echo "Cannot determine existing auto-merge state." >&2; exit 1 ;;
           esac

@@ -13,6 +13,7 @@ All notable changes are documented here using Keep a Changelog conventions.
 ### Fixed
 
 - Cleared earlier automatic merge requests before verifying dependency updates.
+- Preserved current automatic merge requests when older events were rerun.
 
 - Rejected merge-queue callers before enabling dependency automatic merges, whose cancellation contract applies only to native auto-merge requests.
 - Revoked existing automatic merge requests when complete dependency eligibility no longer succeeds, including missing metadata, major updates and failures.
