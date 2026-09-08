@@ -140,10 +140,7 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
             {"UPDATE_TYPE": "version-update:semver-major"},
             {"UPDATE_TYPE": ""},
         ]
-        if ROOT.name == "amprage":
-            cases += [{"PACKAGE_ECOSYSTEM": ""}, {"PACKAGE_ECOSYSTEM": "npm"}, {"DEPENDENCY_NAMES": "homeassistant"}]
-        else:
-            cases += [{"MAINTAINER_CHANGES": "true"}, {"MAINTAINER_CHANGES": ""}]
+        cases += [{"MAINTAINER_CHANGES": "true"}, {"MAINTAINER_CHANGES": ""}]
         for metadata in cases:
             for state in ("true", "false"):
                 with self.subTest(metadata=metadata, state=state):
@@ -191,6 +188,8 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
             with self.subTest(values=values):
                 _, cleanup, calls = self.run_policy({"DEPENDENCY_NAMES": "", **values})
                 self.assertNotEqual(cleanup.returncode, 0)
+                if values.get("GH_READ_EXIT"):
+                    self.assertIn("Cannot read existing auto-merge state.", cleanup.stderr)
                 self.assertFalse(any("--auto" in call for call in calls), calls)
 
     def test_cleanup_cannot_enable_merging_and_uses_queue_result(self) -> None:

@@ -109,7 +109,10 @@ jobs:
             exit 0
           fi
           echo "Update did not pass automatic merge eligibility; manual review is required."
-          auto_merge="$(gh pr view "$PR_URL" --json autoMergeRequest --jq '.autoMergeRequest != null')"
+          if ! auto_merge="$(gh pr view "$PR_URL" --json autoMergeRequest --jq '.autoMergeRequest != null')"; then
+            echo "Cannot read existing auto-merge state." >&2
+            exit 1
+          fi
           case "$auto_merge" in
             true) gh pr merge --disable-auto "$PR_URL" ;;
             false) ;;
