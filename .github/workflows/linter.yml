@@ -32,7 +32,7 @@ jobs:
         with:
           repository: Artic0din/reusable-workflows
           # Library-owned executable tools cannot be replaced by a caller input.
-          ref: 1dba8a502503e74a0cb42f04f1ec75cd29cf2b3a
+          ref: 5998dc5264fd42373375188a6818d691679ea556
           path: automation
           persist-credentials: false
       - name: Set up validation Python
