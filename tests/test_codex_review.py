@@ -144,6 +144,25 @@ else:
         _, statuses = self.run_gate([[summary(), edited]])
         self.assertEqual(statuses[-1]["state"], "pending")
 
+    def test_same_second_completion_cannot_establish_request_order(self) -> None:
+        for completed in (REVIEWED_AT, "2026-09-09T01:00:00.999999Z"):
+            _, statuses = self.run_gate([[summary(reviewed_at=completed), request(created_at=REVIEWED_AT)]])
+            self.assertEqual(statuses[-1]["state"], "pending")
+        _, statuses = self.run_gate([[summary(reviewed_at="2026-09-09T01:00:01Z"),
+                                     request(created_at=REVIEWED_AT)]])
+        self.assertEqual(statuses[-1]["state"], "success")
+
+    def test_base_change_requires_fresh_review_but_title_edit_does_not(self) -> None:
+        event = {"action": "edited", "pull_request": {"updated_at": "2026-09-09T02:00:00Z"},
+                 "changes": {"base": {"ref": {"from": "main"}}}}
+        _, statuses = self.run_gate([[summary()]], event=event)
+        self.assertEqual(statuses[-1]["state"], "pending")
+        _, later = self.run_gate([[summary()]], previous_statuses=statuses)
+        self.assertEqual(later[-1]["state"], "pending")
+        event["changes"] = {"title": {"from": "Old title"}}
+        _, statuses = self.run_gate([[summary()]], event=event)
+        self.assertEqual(statuses[-1]["state"], "success")
+
     def test_deleted_request_survives_later_refreshes_until_review_completes(self) -> None:
         event = {"action": "deleted", "comment": request()}
         result, statuses = self.run_gate([[summary()]], event=event)

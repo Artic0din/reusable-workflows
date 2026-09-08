@@ -97,7 +97,10 @@ jobs:
                           if item.get("author_association") in TRUSTED_ASSOCIATIONS and is_request(item.get("body"))]
               event = object_response(json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text()))
               comment = object_response(event.get("comment", {}))
-              previous_body = object_response(object_response(event.get("changes", {})).get("body", {})).get("from")
+              changes = object_response(event.get("changes", {}))
+              previous_body = object_response(changes.get("body", {})).get("from")
+              if event.get("action") == "edited" and "base" in changes:
+                  requests.append(timestamp(object_response(event["pull_request"])["updated_at"]))
               if (comment.get("author_association") in TRUSTED_ASSOCIATIONS
                       and (is_request(comment.get("body")) or is_request(previous_body))):
                   requests.append(timestamp(comment.get("updated_at", comment.get("created_at"))))
@@ -148,7 +151,8 @@ jobs:
               if not reviewed:
                   raise ValueError("Missing Codex completion timestamp")
               completed_at = timestamp(reviewed[1])
-              if requested and completed_at < requested:
+              # Comment timestamps have second precision; same-second ordering is unknowable.
+              if requested and completed_at.replace(microsecond=0) <= requested.replace(microsecond=0):
                   return "pending", "Waiting for the requested Codex review", url
               # Resolve Codex's abbreviated display SHA before accepting it as current-head evidence.
               resolved = object_response(api(f"repos/{REPOSITORY}/commits/{prefix[1]}"))
