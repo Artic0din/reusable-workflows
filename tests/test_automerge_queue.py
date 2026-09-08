@@ -100,6 +100,13 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
                     check=False,
                 )
 
+            if env.get("RUN_INITIAL") == "true":
+                workflow = yaml.safe_load((ROOT / ".github/workflows/dependabot-automerge.yml").read_text())
+                initial_step = workflow["jobs"]["dependency"]["steps"][0]
+                initial_result = execute(initial_step["run"])
+                if initial_result.returncode != 0:
+                    env["JOB_STATUS"] = "failure"
+
             result = None
             env["QUEUE_OUTCOME"] = "skipped"
             if env["JOB_STATUS"] == env["METADATA_OUTCOME"] == "success":
@@ -197,7 +204,10 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
         job = workflow["jobs"]["dependency"]
         self.assertNotIn("inputs.enabled", job["if"])
         for step in job["steps"]:
-            if step.get("id") == "enable-automerge" or step["name"] == CANCEL_NAME:
+            if step.get("id") == "enable-automerge" or step["name"] in {
+                CANCEL_NAME,
+                "Clear previous automatic merge request",
+            }:
                 continue
             self.assertEqual(step["if"], "${{ inputs.enabled }}")
         queue, cleanup, calls = self.run_policy({"METADATA_OUTCOME": "skipped"})
@@ -210,6 +220,25 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
                 ["pr", "merge", "--disable-auto", PR_URL],
             ],
         )
+
+    def test_previous_request_is_cleared_before_verification(self) -> None:
+        workflow = yaml.safe_load((ROOT / ".github/workflows/dependabot-automerge.yml").read_text())
+        initial_step = workflow["jobs"]["dependency"]["steps"][0]
+        self.assertEqual(initial_step["name"], "Clear previous automatic merge request")
+        self.assertNotIn("if", initial_step)
+        self.assertNotIn("--auto", initial_step["run"])
+        for state in ("true", "false"):
+            _, cleanup, calls = self.run_policy({"RUN_INITIAL": "true", "GH_AUTO_STATE": state})
+            self.assertEqual(cleanup.returncode, 0, cleanup.stderr)
+            self.assertEqual(calls[0][:2], ["pr", "view"])
+            if state == "true":
+                self.assertEqual(calls[1], ["pr", "merge", "--disable-auto", PR_URL])
+            self.assertIn("--auto", calls[-1])
+        for failure in ({"GH_READ_EXIT": "7"}, {"GH_CANCEL_EXIT": "9"}):
+            queue, cleanup, calls = self.run_policy({"RUN_INITIAL": "true", **failure})
+            self.assertIsNone(queue)
+            self.assertNotEqual(cleanup.returncode, 0)
+            self.assertFalse(any("--auto" in call for call in calls), calls)
 
     def test_cleanup_cannot_enable_merging_and_uses_queue_result(self) -> None:
         queue, cleanup = self.steps()

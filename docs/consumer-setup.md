@@ -70,6 +70,7 @@ If an older revision was used with a merge queue, inspect and remove any existin
 Before enabling a merge queue later, disable this capability and clear earlier automatic merge requests and queue entries; a configuration change during an active run can race its preflight check.
 Serialize the privileged caller per pull request and set cancel-in-progress to false.
 The workflow revokes an earlier automatic merge request whenever the complete eligibility decision no longer succeeds.
+It clears earlier requests before verification begins and enables a new request only after success.
 Keep invoking the workflow with enabled set to false when disabling automatic merges so the next matching Dependabot event can revoke an earlier request.
 Keep the caller's target-event entrypoint and pin the shared workflow to reviewed code.
 Do not automatically approve dependency reviews.

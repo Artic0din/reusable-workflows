@@ -87,6 +87,7 @@ Preflight requires the live pull request's isMergeQueueEnabled field to be exact
 This workflow manages native automatic merge requests; it does not dequeue merge-queue entries.
 Shared-workflow updates and missing metadata require manual review.
 The queue step records eligibility only after all guards and the merge request succeed.
+The first step clears any earlier automatic merge request before potentially slow API and metadata checks; a new request can be enabled only after successful verification.
 A separate cleanup step revokes an existing request unless the job, metadata and queue step all succeeded with that positive result.
 Cleanup runs after failures or cancellation and cannot enable a merge.
 With enabled set to false, verification and queueing are skipped while cancellation still runs on matching Dependabot events.
