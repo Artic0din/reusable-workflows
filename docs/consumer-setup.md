@@ -4,7 +4,7 @@
 
 Review the library pull request or release and select its full commit SHA.
 Use that exact SHA in the external job-level uses reference.
-For linter.yml, also set tooling-ref to the same value; both references must change together.
+The library pins its own executable tools; no second caller input is required.
 GitHub Actions does not follow repository redirects, so references use the permanent Artic0din/reusable-workflows namespace.
 
 The executable local calls in [validate-self.yml](../.github/workflows/validate-self.yml) demonstrate each input.
@@ -34,7 +34,7 @@ Existing strong project instructions should be retained.
 
 Keep a local Dependabot github-actions entry so external reusable-workflow references receive updates.
 Use release-associated SHAs with same-line version comments once releases exist.
-Review both workflow and tooling-ref updates together.
+Review workflow changes and any embedded validation-tool pin updates together.
 Configure only the package ecosystems that exist in the caller.
 Keep major updates separate from minor/patch groups.
 
@@ -47,6 +47,6 @@ Do not automatically approve dependency reviews.
 
 Validate a library release against its self-tests and a representative consumer before broad adoption.
 Open consumer PRs for revision changes and preserve required-check contexts.
-Rollback by reverting the consumer's workflow and tooling-ref pins together to a previously verified commit.
+Rollback by reverting the consumer's workflow pins to a previously verified commit.
 Changes to inputs, permissions, output checks, or result semantics require a documented migration.
 Never publish a release or enable privileged behavior solely because YAML parsing passed.

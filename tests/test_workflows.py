@@ -90,11 +90,13 @@ class WorkflowContractTests(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertNotEqual(run_step(script, self.root, OUTPUT_PATH=value).returncode, 0)
 
-    def test_tooling_ref_requires_a_full_commit(self) -> None:
-        script = workflow_step("linter.yml", "Validate immutable tooling reference")
-        self.assertEqual(run_step(script, self.root, TOOLING_REF="a" * 40).returncode, 0)
-        for value in ("main", "v1", "", "abcdef0", "a" * 40 + "\n"):
-            self.assertNotEqual(run_step(script, self.root, TOOLING_REF=value).returncode, 0)
+    def test_executable_tools_are_pinned_by_the_library(self) -> None:
+        workflow = yaml.safe_load((ROOT / ".github/workflows/linter.yml").read_text())
+        checkout = next(step for step in workflow["jobs"]["lint"]["steps"]
+                        if step["name"] == "Check out versioned validation tools")
+        self.assertEqual(checkout["with"]["repository"], "Artic0din/reusable-workflows")
+        self.assertRegex(checkout["with"]["ref"], r"^[0-9a-f]{40}$")
+        self.assertFalse(checkout["with"]["persist-credentials"])
 
     def test_generated_directory_symlink_cannot_bypass_verification(self) -> None:
         self.initialize_output()

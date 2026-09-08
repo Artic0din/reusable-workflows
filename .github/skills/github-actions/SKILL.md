@@ -15,7 +15,8 @@ Keep Copilot's copilot-setup-steps job and Dependabot's configuration in the con
 Use read-only permissions for checks and explicit caller opt-in for privileged automation.
 Never execute pull-request code in the Dependabot target workflow, approve reviews automatically, or bypass protections.
 Resolve action release tags to full SHAs and inspect action metadata before updating references.
-When changing validation scripts, pass the same library commit as tooling-ref and the caller's workflow reference.
+When changing validation scripts or tool locks, push that source commit on the feature branch and update linter.yml's embedded tools pin in a subsequent commit before release.
+Keep that pin library-owned; caller input must not select executable tooling.
 Keep generated-output verification sensitive to changed, deleted, newly generated, and ignored files.
 Use [the instruction refresh skill](../refresh-instructions/SKILL.md) when instruction facts change.
 

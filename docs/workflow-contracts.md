@@ -36,9 +36,11 @@ This checks reproducibility, not the application-specific runtime import graph.
 
 ## Workflow validation
 
-linter.yml requires tooling-ref, a full library commit SHA matching the caller's reusable-workflow reference.
+linter.yml pins its executable validation bundle to a literal, reviewed library commit SHA.
 It checks out the caller under source and this library under automation.
-This explicit second pin ensures scripts and hash-locked tools come from the intended release rather than a mutable branch.
+Callers cannot override that checkout revision through workflow inputs.
+When scripts or tool locks change, publish that source commit on the feature branch and update the library's embedded pin in a subsequent commit before release.
+The self-validation source job tests the current implementation as well as exercising the pinned reusable caller.
 The actionlint Dockerfile and validation dependencies are library-owned.
 
 yaml-paths is a newline-separated list, default .github.

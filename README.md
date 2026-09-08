@@ -7,7 +7,8 @@ Each caller selects the checks it needs and retains its own application behavior
 
 Read [workflow contracts](docs/workflow-contracts.md) before adding a caller.
 Reusable workflows live directly in .github/workflows and use workflow_call.
-Reference this public repository with a full reviewed commit SHA; pass the same SHA as tooling-ref when using linter.yml.
+Reference this public repository with a full reviewed commit SHA.
+The workflow library owns the immutable revision of its executable validation tools.
 The validator checks the caller checkout and loads its own code from a separately pinned library checkout.
 
 Public and private repositories can consume this public library when their Actions policy permits it.
