@@ -122,7 +122,9 @@ Keep required review-conversation resolution enabled independently: completed co
 Enable Codex Review all PRs and On every push before requiring this status.
 Do not silently pass when Codex is unavailable or its summary format changes.
 
-Callers own the triggers and per-PR concurrency group, with cancel-in-progress: false.
+Callers own the triggers and per-PR concurrency group, with cancel-in-progress: false and queue: max.
+The default single pending run can discard a base-change or deleted-request event before its invalidation is persisted.
+GitHub queues up to 100 pending runs with queue: max; monitor cancelled runs and retry dropped invalidations if this platform limit is reached.
 Use pull_request_target for opened, reopened, synchronize, edited and ready_for_review events; the gate reads GitHub metadata only.
 Also handle created, edited and deleted issue_comment events on pull requests when the author is Codex, or a trusted contributor is requesting a review.
 Include workflow_dispatch with a required pull-request-number input to initialize existing PRs and recover missed events.
