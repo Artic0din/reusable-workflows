@@ -12,5 +12,6 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Fixed
 
+- Limited skill updates to tracked, selected files without external hard links or implicit source fetches.
 - Rejected nested generated-output symlinks before and after builds and prevented npm script inputs from being interpreted as command options.
 - Corrected instruction-link validation for filenames with balanced parentheses and escaped punctuation.

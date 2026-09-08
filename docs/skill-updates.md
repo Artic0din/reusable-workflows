@@ -30,7 +30,8 @@ Keep consumer names, inventories and private project context in the consumer or 
 ## Prepare an update
 
 Use a clean feature-branch checkout of the consumer.
-In the library checkout, fetch and review the desired release and ensure both the manifest revision and new commit are available locally.
+In the library checkout, fetch and review the desired release and ensure both commits and their selected skill blobs are available locally.
+Use a Git version supporting --no-lazy-fetch; partial clones must fetch needed blobs explicitly before running the helper.
 Then run the script's --help and pass the exact reviewed commit with --revision:
 
 ```sh
@@ -44,7 +45,9 @@ The script never fetches, executes consumer commands, commits, pushes or opens a
 Use the rollout skill to complete the consumer's checks, contribution requirements and normal GitHub PR process.
 
 Three-way merging preserves non-overlapping repository adaptations.
-Conflicting edits, missing files, symlinks, unapproved paths and invalid revisions fail before writes.
+Conflicting edits, missing or untracked files, symbolic or hard links, unselected paths and invalid revisions fail before writes.
+The manifest and every selected file must already be tracked, including when ignore rules match them.
+Reading a missing source blob fails without allowing Git to fetch it implicitly.
 A release that changes no selected upstream skill produces no update.
 All selected files are validated before any update is applied.
 Local links and agent metadata still need validation after a successful merge; textual compatibility alone does not prove semantic compatibility.

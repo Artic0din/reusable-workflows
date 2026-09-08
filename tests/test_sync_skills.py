@@ -1,10 +1,12 @@
 """Exercise real three-way skill updates against temporary Git repositories."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import sync_skills
@@ -141,6 +143,63 @@ class SyncSkillsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'clean'):
             sync_skills.apply(self.consumer, self.plan(revision))
         self.assertEqual((self.consumer / self.path).read_text(), self.base_text)
+
+    def test_apply_refuses_approved_but_unselected_file_without_writes(self):
+        unselected = '.github/skills/test-gap-audit/SKILL.md'
+        self.write(self.consumer, unselected, 'Repository-owned guidance\n')
+        self.commit(self.consumer)
+        changes = {self.path: 'Selected update\n', unselected: 'Unselected update\n'}
+        before = {path: (self.consumer / path).read_text()
+                  for path in (*changes, sync_skills.MANIFEST)}
+        with self.assertRaisesRegex(ValueError, 'selected'):
+            sync_skills.apply(self.consumer, changes)
+        self.assertEqual({path: (self.consumer / path).read_text() for path in before}, before)
+
+    def test_ignored_untracked_destinations_are_rejected_without_writes(self):
+        for relative in (self.path, sync_skills.MANIFEST):
+            with self.subTest(path=relative):
+                self.git(self.consumer, 'rm', '--cached', relative)
+                self.write(self.consumer, '.gitignore', relative + '\n')
+                self.commit(self.consumer)
+                before = (self.consumer / relative).read_text()
+                self.assertEqual(self.git(self.consumer, 'status', '--porcelain'), '')
+                with self.assertRaises(ValueError):
+                    sync_skills.apply(self.consumer, {relative: 'Replacement\n'})
+                self.assertEqual((self.consumer / relative).read_text(), before)
+                self.git(self.consumer, 'add', '-f', relative)
+                self.commit(self.consumer)
+
+    def test_external_hard_links_are_rejected_without_writes(self):
+        for relative in (self.path, sync_skills.MANIFEST):
+            with self.subTest(path=relative):
+                destination = self.consumer / relative
+                outside = self.root / 'outside-template'
+                before = destination.read_text()
+                outside.hardlink_to(destination)
+                try:
+                    with self.assertRaisesRegex(ValueError, 'hard link'):
+                        sync_skills.apply(self.consumer, {relative: 'Replacement\n'})
+                    self.assertEqual(destination.read_text(), before)
+                    self.assertEqual(outside.read_text(), before)
+                finally:
+                    outside.unlink()
+
+    def test_partial_clone_never_fetches_missing_source_blobs(self):
+        self.update_library('New revision\n')
+        origin = self.root / 'origin.git'
+        partial = self.root / 'partial'
+        self.git(self.root, 'clone', '--bare', str(self.library), str(origin))
+        self.git(origin, 'config', 'uploadpack.allowFilter', 'true')
+        self.git(self.root, 'clone', '--filter=blob:none', '--no-checkout', origin.as_uri(), str(partial))
+        trace = self.root / 'packet-trace'
+        with patch.dict(os.environ, {'GIT_TRACE_PACKET': str(trace)}):
+            with self.assertRaisesRegex(ValueError, 'Git show failed'):
+                sync_skills.source_text(partial, self.base, self.path)
+        self.assertNotIn('command=fetch', trace.read_text() if trace.exists() else '')
+        missing = subprocess.run(['git', '--no-lazy-fetch', '-C', str(partial),
+                                  'cat-file', '-e', f'{self.base}:{self.path}'],
+                                 check=False, capture_output=True)
+        self.assertNotEqual(missing.returncode, 0)
 
 
 if __name__ == '__main__':

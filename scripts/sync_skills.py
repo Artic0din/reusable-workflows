@@ -19,7 +19,7 @@ REVISION = re.compile(r'[0-9a-f]{40}')
 
 
 def git(repository: Path, *arguments: str) -> str:
-    result = subprocess.run(['git', '-C', str(repository), *arguments],
+    result = subprocess.run(['git', '--no-lazy-fetch', '-C', str(repository), *arguments],
                             check=False, capture_output=True, text=True)
     if result.returncode:
         raise ValueError(f'Git {arguments[0]} failed: {result.stderr.strip()}')
@@ -37,10 +37,13 @@ def checked_path(root: Path, relative: str) -> Path:
             raise ValueError(f'{relative}: symlinks are not managed')
     if not path.is_file():
         raise ValueError(f'{relative}: managed file is missing')
+    if path.stat().st_nlink != 1:
+        raise ValueError(f'{relative}: hard links are not managed')
     return path
 
 
 def read_manifest(root: Path) -> dict:
+    git(root, 'ls-files', '--error-unmatch', '--', MANIFEST)
     manifest = json.loads(checked_path(root, MANIFEST).read_text())
     if not isinstance(manifest, dict) or set(manifest) != {'schema-version', 'source', 'revision', 'files'}:
         raise ValueError('Invalid skill manifest fields')
@@ -55,6 +58,7 @@ def read_manifest(root: Path) -> dict:
             or not all(isinstance(path, str) and path in ALLOWED_FILES for path in files)
             or len(files) != len(set(files))):
         raise ValueError('Manifest files must be a nonempty, unique list of approved skill files')
+    git(root, 'ls-files', '--error-unmatch', '--', *files)
     return manifest
 
 
@@ -107,8 +111,9 @@ def apply(consumer: Path, changes: dict[str, str]) -> None:
         raise ValueError('The consumer must be the Git repository root')
     if git(root, 'status', '--porcelain', '--untracked-files=all').strip():
         raise ValueError('The consumer checkout must be clean before applying an update')
-    if not set(changes).issubset(ALLOWED_FILES | {MANIFEST}):
-        raise ValueError('Changes include an unmanaged file')
+    selected = set(read_manifest(root)['files']) | {MANIFEST}
+    if not set(changes).issubset(selected):
+        raise ValueError('Changes include a file not selected in the consumer manifest')
     destinations = {name: checked_path(root, name) for name in changes}
     original = {name: path.read_text() for name, path in destinations.items()}
     try:
