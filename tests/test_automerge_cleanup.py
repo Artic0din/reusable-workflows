@@ -19,7 +19,7 @@ class AutoMergeCleanupTests(unittest.TestCase):
         self.addCleanup(self.directory.cleanup)
         root = Path(self.directory.name)
         self.state = root / 'state.json'
-        self.state.write_text(json.dumps({'state': 'open', 'auto_merge': None}))
+        self.state.write_text(json.dumps({'state': 'open', 'head': {'sha': guard_tests.HEAD}, 'auto_merge': None}))
         executable = root / 'gh'
         executable.write_text('#!/bin/sh\nset -eu\ncase "$*" in\n'
                               'api*)\n'
@@ -85,14 +85,30 @@ class AutoMergeCleanupTests(unittest.TestCase):
         self.assertIsNone(self.cleanup('success'))
         self.assertIsNotNone(json.loads(self.state.read_text())['auto_merge'])
 
+    def test_stale_run_cannot_cancel_a_newer_head_queue(self) -> None:
+        self.assertEqual(self.queue().returncode, 0)
+        state = json.loads(self.state.read_text())
+        state['head']['sha'] = 'b' * 40
+        self.state.write_text(json.dumps(state))
+        result = self.cleanup('skipped', CLEANUP_FAILURE='true')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(self.state.read_text()), state)
+
+    def test_queue_and_cleanup_share_a_non_cancelling_pr_lock(self) -> None:
+        job = yaml.safe_load(WORKFLOW.read_text())['jobs']['dependency']
+        self.assertEqual(job.get('concurrency'), {
+            'group': 'reusable-dependabot-automerge-${{ github.repository }}-${{ github.event.pull_request.number }}',
+            'cancel-in-progress': False,
+        })
+
     def test_ambiguous_queue_failure_is_cancelled(self) -> None:
         self.assertNotEqual(self.queue(QUEUE_FAILURE='true').returncode, 0)
         self.cleanup('failure')
         self.assertIsNone(json.loads(self.state.read_text())['auto_merge'])
 
     def test_already_disabled_or_closed_pull_needs_no_write(self) -> None:
-        for state in ({'state': 'open', 'auto_merge': None},
-                      {'state': 'closed', 'auto_merge': {'enabled_by': 'bot'}}):
+        for state in ({'state': 'open', 'head': {'sha': guard_tests.HEAD}, 'auto_merge': None},
+                      {'state': 'closed', 'head': {'sha': guard_tests.HEAD}, 'auto_merge': {'enabled_by': 'bot'}}):
             with self.subTest(state=state):
                 self.state.write_text(json.dumps(state))
                 result = self.cleanup('skipped', CLEANUP_FAILURE='true')

@@ -22,6 +22,9 @@ jobs:
       github.event.pull_request.base.ref == github.event.repository.default_branch
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    concurrency:
+      group: reusable-dependabot-automerge-${{ github.repository }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     permissions:
       contents: write  # Request a protected squash merge for the verified head.
       pull-requests: write  # Enable auto-merge without approving reviews.
@@ -87,13 +90,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" > "$RUNNER_TEMP/auto-merge-cleanup.json"
           jq --exit-status '
             type == "object" and (.state == "open" or .state == "closed") and
-            has("auto_merge") and (.auto_merge | type == "object" or type == "null")
+            has("auto_merge") and (.auto_merge | type == "object" or type == "null") and
+            (.head.sha | type == "string" and length > 0)
           ' "$RUNNER_TEMP/auto-merge-cleanup.json"
-          if jq --exit-status '.state == "open" and .auto_merge != null' \
+          if jq --exit-status --arg head "$PR_HEAD_SHA" \
+            '.state == "open" and .head.sha == $head and .auto_merge != null' \
             "$RUNNER_TEMP/auto-merge-cleanup.json" > /dev/null; then
             gh pr merge --disable-auto "$PR_NUMBER" --repo "$REPOSITORY"
           fi

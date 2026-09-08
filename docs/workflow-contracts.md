@@ -3,7 +3,8 @@
 Call these workflows at job level with workflow_call.
 All jobs use GitHub-hosted Ubuntu 24.04; application-specific or macOS builds remain caller-owned.
 Timeouts are bounded.
-Reusable workflows do not define caller triggers or concurrency groups, avoiding cancellation collisions with their caller.
+Callers own triggers and general concurrency policy.
+The Dependabot job additionally owns the dedicated per-PR lock described below.
 
 ## Baseline
 
@@ -86,7 +87,10 @@ The merge command pins the expected head and respects GitHub protections.
 If that command does not succeed, an always-run cleanup step disables any existing auto-merge request for the open PR.
 This includes failed eligibility or metadata checks, skipped major/maintainer updates, cancelled steps and ambiguous queue failures.
 The cleanup reads current state independently of the guard's temporary files, avoids writes when auto-merge is already disabled or the PR is closed, and reports API failures instead of suppressing them.
-Callers should serialize runs per PR without cancelling an active run, so cleanup completes before a subsequent eligible run queues the update.
+The job serializes all attempts for each repository/PR with a library-owned `reusable-dependabot-automerge-` concurrency group and does not cancel an active attempt.
+Caller workflows must use a different concurrency group if they also configure serialization.
+Cleanup checks that the current PR head still matches its triggering head before cancelling auto-merge.
+This protects newer requests even when an older workflow starts late; [GitHub does not guarantee dispatch ordering](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
 Cleanup needs a running job and working GitHub API access; it cannot revoke a completed merge or run after the runner is forcibly terminated.
 There is no checkout, execution of PR code, automatic approval, or protection bypass.
 GitHub may merge immediately if all configured requirements already pass.
