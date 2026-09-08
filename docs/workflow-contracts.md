@@ -86,6 +86,7 @@ Shared-workflow updates and missing metadata require manual review.
 The queue step records eligibility only after all guards and the merge request succeed.
 A separate cleanup step revokes an existing request unless the job, metadata and queue step all succeeded with that positive result.
 Cleanup runs after failures or cancellation and cannot enable a merge.
+With enabled set to false, verification and queueing are skipped while cancellation still runs on matching Dependabot events.
 Callers must serialize runs per pull request with cancellation disabled to prevent overlapping queue and cleanup steps.
 The merge command pins the expected head and respects GitHub protections.
 There is no checkout, execution of PR code, automatic approval, or protection bypass.

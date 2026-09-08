@@ -192,6 +192,25 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
                     self.assertIn("Cannot read existing auto-merge state.", cleanup.stderr)
                 self.assertFalse(any("--auto" in call for call in calls), calls)
 
+    def test_disabled_automation_can_cancel_an_existing_queue(self) -> None:
+        workflow = yaml.safe_load((ROOT / ".github/workflows/dependabot-automerge.yml").read_text())
+        job = workflow["jobs"]["dependency"]
+        self.assertNotIn("inputs.enabled", job["if"])
+        for step in job["steps"]:
+            if step.get("id") == "enable-automerge" or step["name"] == CANCEL_NAME:
+                continue
+            self.assertEqual(step["if"], "${{ inputs.enabled }}")
+        queue, cleanup, calls = self.run_policy({"METADATA_OUTCOME": "skipped"})
+        self.assertIsNone(queue)
+        self.assertEqual(cleanup.returncode, 0, cleanup.stderr)
+        self.assertEqual(
+            calls,
+            [
+                ["pr", "view", PR_URL, "--json", "autoMergeRequest", "--jq", ".autoMergeRequest != null"],
+                ["pr", "merge", "--disable-auto", PR_URL],
+            ],
+        )
+
     def test_cleanup_cannot_enable_merging_and_uses_queue_result(self) -> None:
         queue, cleanup = self.steps()
         self.assertEqual(queue["if"], "${{ success() && steps.metadata.outcome == 'success' }}")
