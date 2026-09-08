@@ -1,6 +1,6 @@
 # Reusable workflows
 
-Shared GitHub Actions checks and scoped agent skills for repositories maintained under Artic0din and plaintextlab.
+Shared GitHub Actions checks and scoped agent skills for repositories maintained under Artic0din and Plaintext-Lab.
 Each caller selects the checks it needs and retains its own application behavior, events, required checks, and secrets.
 
 ## Installation
@@ -43,6 +43,8 @@ Copy the selected skill folders into the caller's .github/skills, adapt reposito
 The README agent also needs its linked readme-docs skill.
 For agents that do not discover .github/skills, add explicit links in the caller's existing instruction file.
 Do not copy this repository's entire agent policy over a project's instructions.
+The [rollout skill](.github/skills/rollout-repositories/SKILL.md) onboards selected repositories and prepares future update PRs.
+The [skill-update helper](docs/skill-updates.md) preserves consumer adaptations with three-way merges and refuses conflicts before writing.
 
 ## Development
 
