@@ -71,6 +71,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
       - name: Queue eligible update
+        id: queue
         if: >-
           steps.metadata.outputs.maintainer-changes == 'false' &&
           (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
@@ -80,3 +81,19 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: gh pr merge --auto --squash --match-head-commit "$PR_HEAD_SHA" "$PR_URL"
+      - name: Cancel unqualified auto-merge
+        if: ${{ always() && steps.queue.outcome != 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" > "$RUNNER_TEMP/auto-merge-cleanup.json"
+          jq --exit-status '
+            type == "object" and (.state == "open" or .state == "closed") and
+            has("auto_merge") and (.auto_merge | type == "object" or type == "null")
+          ' "$RUNNER_TEMP/auto-merge-cleanup.json"
+          if jq --exit-status '.state == "open" and .auto_merge != null' \
+            "$RUNNER_TEMP/auto-merge-cleanup.json" > /dev/null; then
+            gh pr merge --disable-auto "$PR_NUMBER" --repo "$REPOSITORY"
+          fi

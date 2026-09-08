@@ -83,10 +83,15 @@ Other committers fail closed, including signed human commits attributed to Depen
 The complete paginated commit count must match the live PR.
 Only minor/patch updates with no maintainer changes qualify.
 The merge command pins the expected head and respects GitHub protections.
+If that command does not succeed, an always-run cleanup step disables any existing auto-merge request for the open PR.
+This includes failed eligibility or metadata checks, skipped major/maintainer updates, cancelled steps and ambiguous queue failures.
+The cleanup reads current state independently of the guard's temporary files, avoids writes when auto-merge is already disabled or the PR is closed, and reports API failures instead of suppressing them.
+Callers should serialize runs per PR without cancelling an active run, so cleanup completes before a subsequent eligible run queues the update.
+Cleanup needs a running job and working GitHub API access; it cannot revoke a completed merge or run after the runner is forcibly terminated.
 There is no checkout, execution of PR code, automatic approval, or protection bypass.
 GitHub may merge immediately if all configured requirements already pass.
 Do not enable this capability until the caller's effective rules and its intended review requirements are verified.
-Fixture tests validate the guard; an actual eligible dependency PR is needed to prove live operation.
+Fixture tests validate the guard and queued-state cleanup; an actual eligible dependency PR is needed to prove live operation.
 
 ## Secret scan
 
