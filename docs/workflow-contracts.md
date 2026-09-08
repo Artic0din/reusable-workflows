@@ -98,7 +98,7 @@ Changing the release requires updating and verifying its digest together.
 
 ## Codex review completion
 
-codex-review-gate.yml requires a positive numeric pull-request-number and caller permissions contents: read, issues: read, pull-requests: read, and statuses: write.
+codex-review-gate.yml requires a positive integer pull-request-number and caller permissions contents: read, issues: read, pull-requests: read, and statuses: write.
 It does not check out code, execute pull-request content, approve reviews, merge changes, or receive publishing credentials.
 The public workflow source must be pinned to a reviewed full commit SHA in the caller.
 
