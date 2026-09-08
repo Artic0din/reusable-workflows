@@ -11,6 +11,26 @@ The executable local calls in [validate-self.yml](../.github/workflows/validate-
 The external pilot is maintained as a separate consumer pull request.
 A public library can be called from public or private projects when their Actions policy permits it.
 
+This complete caller uses the initial implementation revision and a minimal file baseline.
+Change the required file list to match the consumer, and review newer library revisions before adopting them.
+
+```yaml
+name: Repository checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  baseline:
+    uses: Artic0din/reusable-workflows/.github/workflows/baseline.yml@c29d127ba7c6b01a07e94cd16af76761a29b7a90
+    with:
+      required-files: README.md, .gitignore
+```
+
+If branch rules already require a check name, use the aggregate pattern below and retain that exact name.
+
 ## Keep the caller's contract
 
 Keep existing events, concurrency controls, permissions, and language-specific checks.

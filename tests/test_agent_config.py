@@ -68,6 +68,12 @@ class AgentConfigurationTests(unittest.TestCase):
         self.assertEqual(len(errors), 1, errors)
         self.assertIn("missing.md", errors[0])
 
+    def test_commas_inside_character_classes_do_not_split_scopes(self) -> None:
+        self.write("src/a.py", "value = 1\n")
+        self.write(".github/instructions/code.instructions.md",
+                   "---\ndescription: Code\napplyTo: 'src/[a,b].py,src/a.py'\n---\n")
+        self.assertEqual(validate(self.root), [])
+
 
 if __name__ == "__main__":
     unittest.main()

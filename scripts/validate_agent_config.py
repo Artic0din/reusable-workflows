@@ -9,6 +9,7 @@ import yaml
 
 EXCLUDED_DIRECTORIES = {".git", ".venv", "node_modules", "__pycache__"}
 LINK = re.compile(r"\[[^\]]*\]\((?:<([^>]+)>|([^\s)]+))(?:\s+[^)]*)?\)")
+CHARACTER_CLASS = re.compile(r"\[(?:[!^])?\]?[^]]*\]")
 
 
 def repository_files(root: Path) -> list[Path]:
@@ -39,7 +40,10 @@ def without_fences(text: str) -> str:
 def scope_patterns(scope: str) -> list[str]:
     patterns = []
     start = depth = 0
+    protected = {index for match in CHARACTER_CLASS.finditer(scope) for index in range(*match.span())}
     for index, character in enumerate(scope):
+        if index in protected:
+            continue
         if character == "{":
             depth += 1
         elif character == "}":
@@ -52,10 +56,11 @@ def scope_patterns(scope: str) -> list[str]:
 
 
 def matches_scope(relative: str, pattern: str) -> bool:
-    brace = re.search(r"\{([^{}]+)\}", pattern)
+    masked = CHARACTER_CLASS.sub(lambda match: "_" * len(match[0]), pattern)
+    brace = re.search(r"\{([^{}]+)\}", masked)
     if brace:
         return any(matches_scope(relative, pattern[:brace.start()] + option + pattern[brace.end():])
-                   for option in brace.group(1).split(","))
+                   for option in scope_patterns(pattern[brace.start() + 1:brace.end() - 1]))
     return PurePosixPath(relative).full_match(pattern, case_sensitive=True)
 
 
