@@ -1,0 +1,105 @@
+name: Reusable Python and npm CI
+on:
+  workflow_call:
+    inputs:
+      python:
+        description: Run Python unittest discovery
+        type: boolean
+        default: true
+      npm:
+        description: Run npm install and the selected npm scripts
+        type: boolean
+        default: false
+      python-version-file:
+        type: string
+        default: .python-version
+      node-version-file:
+        type: string
+        default: .node-version
+      python-requirements:
+        description: Optional hash-locked pip requirements file
+        type: string
+        default: ''
+      python-test-directory:
+        type: string
+        default: tests
+      python-test-pattern:
+        type: string
+        default: test*.py
+      npm-test-script:
+        type: string
+        default: test
+      npm-directory:
+        description: Repository-relative npm project directory
+        type: string
+        default: .
+      npm-build-script:
+        description: Optional npm build script
+        type: string
+        default: ''
+permissions:
+  contents: read
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Require at least one test runner
+        env:
+          PYTHON_ENABLED: ${{ inputs.python }}
+          NPM_ENABLED: ${{ inputs.npm }}
+        run: test "$PYTHON_ENABLED" = true || test "$NPM_ENABLED" = true
+      - name: Check out caller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        if: inputs.python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version-file: ${{ inputs.python-version-file }}
+      - name: Install Python dependencies
+        if: inputs.python && inputs.python-requirements != ''
+        env:
+          REQUIREMENTS: ${{ inputs.python-requirements }}
+        run: python -m pip install --require-hashes -r "$REQUIREMENTS"
+      - name: Set up Node
+        if: inputs.npm
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version-file: ${{ inputs.node-version-file }}
+          package-manager-cache: false
+      - name: Run Python tests
+        if: inputs.python
+        env:
+          TEST_DIRECTORY: ${{ inputs.python-test-directory }}
+          TEST_PATTERN: ${{ inputs.python-test-pattern }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          import unittest
+          suite = unittest.defaultTestLoader.discover(
+              os.environ["TEST_DIRECTORY"], pattern=os.environ["TEST_PATTERN"])
+          if suite.countTestCases() == 0:
+              sys.exit("No Python tests were discovered.")
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          sys.exit(not result.wasSuccessful())
+          PY
+      - name: Install npm dependencies
+        if: inputs.npm
+        working-directory: ${{ inputs.npm-directory }}
+        run: npm ci
+      - name: Build npm project
+        if: inputs.npm && inputs.npm-build-script != ''
+        working-directory: ${{ inputs.npm-directory }}
+        env:
+          BUILD_SCRIPT: ${{ inputs.npm-build-script }}
+        run: npm run -- "$BUILD_SCRIPT"
+      - name: Run npm tests
+        if: inputs.npm
+        working-directory: ${{ inputs.npm-directory }}
+        env:
+          TEST_SCRIPT: ${{ inputs.npm-test-script }}
+        run: npm run -- "$TEST_SCRIPT"

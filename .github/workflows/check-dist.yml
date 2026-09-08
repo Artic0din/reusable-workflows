@@ -1,0 +1,76 @@
+name: Reusable generated-output integrity
+on:
+  workflow_call:
+    inputs:
+      output-path:
+        description: Tracked generated directory relative to the repository root
+        type: string
+        required: true
+      build-script:
+        description: npm script that regenerates output-path
+        type: string
+        default: build
+      node-version-file:
+        type: string
+        default: .node-version
+      working-directory:
+        description: Repository-relative npm project directory
+        type: string
+        default: .
+permissions:
+  contents: read
+jobs:
+  generated:
+    name: Generated output integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out caller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate output directory
+        env:
+          OUTPUT_PATH: ${{ inputs.output-path }}
+        run: &validate-output |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          root = Path.cwd().resolve()
+          value = os.environ["OUTPUT_PATH"]
+          target = (root / value).resolve()
+          if not value or Path(value).is_absolute() or target == root or not target.is_relative_to(root):
+              raise SystemExit("output-path must be a directory inside the caller repository.")
+          if root / value != target:
+              raise SystemExit("output-path cannot contain symlinks or parent traversal.")
+          if not target.is_dir():
+              raise SystemExit("The generated directory must exist before building.")
+          if any(path.is_symlink() for path in target.rglob("*")):
+              raise SystemExit("The generated directory cannot contain nested symlinks.")
+          PY
+          GIT_LITERAL_PATHSPECS=1 git ls-files --error-unmatch -- "$OUTPUT_PATH" > /dev/null
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version-file: ${{ inputs.node-version-file }}
+          package-manager-cache: false
+      - name: Install npm dependencies
+        working-directory: ${{ inputs.working-directory }}
+        run: npm ci
+      - name: Regenerate output
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          BUILD_SCRIPT: ${{ inputs.build-script }}
+        run: npm run -- "$BUILD_SCRIPT"
+      - name: Revalidate output directory
+        env:
+          OUTPUT_PATH: ${{ inputs.output-path }}
+        run: *validate-output
+      - name: Verify generated output is unchanged
+        env:
+          OUTPUT_PATH: ${{ inputs.output-path }}
+        run: |
+          export GIT_LITERAL_PATHSPECS=1
+          test -d "$OUTPUT_PATH"
+          git diff --quiet --exit-code HEAD -- "$OUTPUT_PATH"
+          test -z "$(git ls-files --others -- "$OUTPUT_PATH")"

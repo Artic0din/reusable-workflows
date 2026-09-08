@@ -1,0 +1,56 @@
+name: Reusable CodeQL
+on:
+  workflow_call:
+    inputs:
+      languages:
+        description: JSON array of CodeQL languages supported with build-mode none
+        type: string
+        default: '["actions"]'
+      enabled:
+        description: Explicit scan activation; private callers must already have Code Security
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  availability:
+    name: CodeQL availability
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Report scan activation
+        env:
+          ENABLED: ${{ inputs.enabled }}
+        run: |
+          if [ "$ENABLED" = true ]; then
+            echo "CodeQL was requested; analysis results determine success." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "CodeQL is disabled. No scan ran." >> "$GITHUB_STEP_SUMMARY"
+          fi
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    if: inputs.enabled
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read  # Read workflow-run metadata for the caller.
+      security-events: write  # Upload CodeQL results for the caller.
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(inputs.languages) }}
+    steps:
+      - name: Check out caller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938  # v4.37.9
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - name: Analyze source
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938  # v4.37.9
+        with:
+          category: /language:${{ matrix.language }}

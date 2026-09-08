@@ -1,0 +1,28 @@
+name: Reusable repository baseline
+on:
+  workflow_call:
+    inputs:
+      required-files:
+        description: Comma-separated repository-relative files required by this project
+        type: string
+        default: README.md, LICENSE, .gitignore, AGENTS.md
+permissions:
+  contents: read
+jobs:
+  baseline:
+    name: Repository baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out caller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Reject an empty baseline
+        env:
+          REQUIRED_FILES: ${{ inputs.required-files }}
+        run: test -n "${REQUIRED_FILES//[[:space:],]/}"
+      - name: Validate required files
+        uses: chrisreddington/validate-file-exists@ff1ba041fbaa672eeb84a53b8c33ffd381c080f2  # v0.0.10
+        with:
+          required-files: ${{ inputs.required-files }}
