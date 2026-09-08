@@ -57,6 +57,9 @@ Use [skill updates](skill-updates.md) and the [rollout skill](../.github/skills/
 Keep a local Dependabot github-actions entry so external reusable-workflow references receive updates.
 Use release-associated SHAs with same-line version comments once releases exist.
 Review workflow changes and any embedded validation-tool pin updates together.
+Update matching version prose and workflow-contract links in consumer guides and skills in the same PR, including Dependabot PRs.
+Keep copied-skill manifest revisions unchanged for workflow-only updates; those revisions record the skills' merge bases.
+Exclude shared-workflow updates from existing dependency auto-merge paths until they receive the required review and validation.
 Configure only the package ecosystems that exist in the caller.
 Keep major updates separate from minor/patch groups.
 

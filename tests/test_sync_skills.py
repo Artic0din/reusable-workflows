@@ -201,6 +201,66 @@ class SyncSkillsTests(unittest.TestCase):
                                  check=False, capture_output=True)
         self.assertNotEqual(missing.returncode, 0)
 
+    def test_hidden_index_paths_are_rejected_without_writes(self):
+        revision = self.update_library(self.base_text.replace('Shared first line', 'Updated first line'))
+        changes = self.plan(revision)
+        for flag in ('assume-unchanged', 'skip-worktree'):
+            for relative in (self.path, sync_skills.MANIFEST):
+                with self.subTest(flag=flag, path=relative):
+                    destination = self.consumer / relative
+                    original = {path: (self.consumer / path).read_text()
+                                for path in (self.path, sync_skills.MANIFEST)}
+                    self.git(self.consumer, 'update-index', '--' + flag, relative)
+                    flags = self.git(self.consumer, 'ls-files', '-v', '--', relative)
+                    destination.write_text(original[relative] + '\n')
+                    before = {path: (self.consumer / path).read_text()
+                              for path in (self.path, sync_skills.MANIFEST)}
+                    try:
+                        self.assertEqual(self.git(self.consumer, 'status', '--porcelain'), '')
+                        with self.assertRaisesRegex(ValueError, 'index flags'):
+                            sync_skills.apply(self.consumer, changes)
+                        self.assertEqual({path: (self.consumer / path).read_text() for path in before}, before)
+                        self.assertEqual(self.git(self.consumer, 'ls-files', '-v', '--', relative), flags)
+                    finally:
+                        self.git(self.consumer, 'update-index', '--no-' + flag, relative)
+                        for path, content in original.items():
+                            (self.consumer / path).write_text(content)
+
+    def test_clean_flagged_selected_paths_outside_changes_are_rejected(self):
+        for flag in ('assume-unchanged', 'skip-worktree'):
+            for relative in (self.path, sync_skills.MANIFEST):
+                with self.subTest(flag=flag, path=relative):
+                    other = sync_skills.MANIFEST if relative == self.path else self.path
+                    before = {path: (self.consumer / path).read_text()
+                              for path in (self.path, sync_skills.MANIFEST)}
+                    self.git(self.consumer, 'update-index', '--' + flag, relative)
+                    flags = self.git(self.consumer, 'ls-files', '-v', '--', relative)
+                    try:
+                        with self.assertRaisesRegex(ValueError, 'index flags'):
+                            sync_skills.apply(self.consumer, {other: before[other] + '\n'})
+                        self.assertEqual({path: (self.consumer / path).read_text() for path in before}, before)
+                        self.assertEqual(self.git(self.consumer, 'ls-files', '-v', '--', relative), flags)
+                    finally:
+                        self.git(self.consumer, 'update-index', '--no-' + flag, relative)
+
+    def test_replacement_objects_cannot_change_reviewed_source(self):
+        reviewed_text = self.base_text.replace('Shared first line', 'Reviewed first line')
+        reviewed = self.update_library(reviewed_text)
+        other = self.update_library(self.base_text.replace('Shared first line', 'Unreviewed first line'))
+        for object_type in ('commit', 'blob'):
+            with self.subTest(object_type=object_type):
+                source = reviewed if object_type == 'commit' else self.git(self.library, 'rev-parse', f'{reviewed}:{self.path}')
+                replacement = other if object_type == 'commit' else self.git(self.library, 'rev-parse', f'{other}:{self.path}')
+                self.git(self.library, 'replace', source, replacement)
+                try:
+                    self.assertNotEqual(self.git(self.library, 'show', f'{reviewed}:{self.path}'), reviewed_text.strip())
+                    self.assertEqual(sync_skills.source_text(self.library, reviewed, self.path), reviewed_text)
+                    changes = self.plan(reviewed)
+                    self.assertEqual(changes[self.path], reviewed_text)
+                    self.assertEqual(json.loads(changes[sync_skills.MANIFEST])['revision'], reviewed)
+                finally:
+                    self.git(self.library, 'replace', '-d', source)
+
 
 if __name__ == '__main__':
     unittest.main()

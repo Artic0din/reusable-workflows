@@ -15,12 +15,16 @@ Use the authenticated GitHub account and exact owner names to enumerate active r
 Exclude forks and archived repositories unless the user explicitly includes them.
 Use an isolated checkout per repository, record the default branch and current head, and inspect overlapping open pull requests.
 Follow required repository setup or agent lifecycle commands before editing.
+Match the README agent's tools to mandatory consumer lifecycle commands; add scoped execution only where those commands require it.
 Do not infer a build, license, test command or deployment permission from a template.
 
 ## Prepare changes
 
 For onboarding, select applicable reusable workflows and pin a reviewed release commit with its version comment.
 Preserve existing checks, events, runner requirements and aggregate failure handling.
+Check existing dependency auto-merge paths and require manual review for shared-workflow upgrades.
+Update associated workflow-contract links and version prose in the same PR as each pin change, including Dependabot PRs.
+Do not advance the copied-skill manifest revision for a workflow-only change.
 Select and tailor skills, retain existing stronger guidance, and record only supported managed paths in .github/reusable-skills.json.
 Keep project-specific context in the consumer's documentation.
 

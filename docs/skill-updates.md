@@ -1,7 +1,11 @@
 # Updating tailored skills
 
 Workflow references and copied skills have separate update paths.
+Applying updates rejects managed files with assume-unchanged or skip-worktree index flags, including selected files with no incoming change.
+Reviewed source revisions are read without Git replacement objects or implicit network fetches.
 Dependabot updates versioned workflow pins.
+Those PRs must also update matching workflow-version prose and contract links in consumer guides and skills.
+They must preserve the copied-skill manifest revision unless copied skills are updated through the three-way merge process.
 The [rollout skill](../.github/skills/rollout-repositories/SKILL.md) prepares skill-update pull requests using the maintainer's existing GitHub CLI session.
 It is explicitly invoked; installation does not schedule work, create cross-repository credentials, or merge changes.
 

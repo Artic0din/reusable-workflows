@@ -19,7 +19,7 @@ REVISION = re.compile(r'[0-9a-f]{40}')
 
 
 def git(repository: Path, *arguments: str) -> str:
-    result = subprocess.run(['git', '--no-lazy-fetch', '-C', str(repository), *arguments],
+    result = subprocess.run(['git', '--no-lazy-fetch', '--no-replace-objects', '-C', str(repository), *arguments],
                             check=False, capture_output=True, text=True)
     if result.returncode:
         raise ValueError(f'Git {arguments[0]} failed: {result.stderr.strip()}')
@@ -112,6 +112,9 @@ def apply(consumer: Path, changes: dict[str, str]) -> None:
     if git(root, 'status', '--porcelain', '--untracked-files=all').strip():
         raise ValueError('The consumer checkout must be clean before applying an update')
     selected = set(read_manifest(root)['files']) | {MANIFEST}
+    entries = git(root, 'ls-files', '-v', '-z', '--', *sorted(selected)).split('\0')
+    if any(entry and (entry.startswith('S ') or entry[0].islower()) for entry in entries):
+        raise ValueError('Managed files with assume-unchanged or skip-worktree index flags are not supported')
     if not set(changes).issubset(selected):
         raise ValueError('Changes include a file not selected in the consumer manifest')
     destinations = {name: checked_path(root, name) for name in changes}
