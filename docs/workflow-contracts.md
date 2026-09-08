@@ -96,6 +96,36 @@ Caller Gitleaks configuration is honored, so review any allowlists as part of no
 Existing findings also fail; this workflow does not silently create a baseline or suppress results.
 Changing the release requires updating and verifying its digest together.
 
+## Codex review completion
+
+codex-review-gate.yml requires a positive numeric pull-request-number and caller permissions contents: read, issues: read, pull-requests: read, and statuses: write.
+It does not check out code, execute pull-request content, approve reviews, merge changes, or receive publishing credentials.
+The public workflow source must be pinned to a reviewed full commit SHA in the caller.
+
+The workflow publishes the commit-status context `Codex review complete`.
+Require this exact context from GitHub Actions after verifying a real consumer run; the workflow job's own success is not the completion signal.
+Missing, running or stale code-review evidence stays pending.
+Failed, cancelled, unknown or malformed evidence cannot pass, and API failures leave an error or pending status.
+Completed review passes only after its abbreviated commit resolves through GitHub to the full current head and the head is rechecked before publication.
+Only the authenticated `chatgpt-codex-connector[bot]` account, including its numeric account ID and bot type, can supply evidence.
+The separate Security Review row cannot satisfy Code Review completion.
+The latest summary and all pages of comments are considered.
+An owner, member or collaborator's newer `@codex review` request invalidates older completion evidence.
+Untrusted commenters cannot hold the gate by posting review requests that Codex would not honor.
+
+Keep required review-conversation resolution enabled independently: completed code review can contain findings and does not mean approval.
+Enable Codex Review all PRs and On every push before requiring this status.
+Do not silently pass when Codex is unavailable or its summary format changes.
+
+Callers own the triggers and per-PR concurrency group, with cancel-in-progress: false.
+Use pull_request_target for opened, reopened, synchronize and ready_for_review events; the gate reads GitHub metadata only.
+Also handle created, edited and deleted issue_comment events on pull requests when the author is Codex, or a trusted contributor is requesting a review.
+Include workflow_dispatch with a required pull-request-number input to initialize existing PRs and recover missed events.
+Comment events load the caller from its default branch, so merge the caller before relying on them.
+GitHub event delivery, runner startup, and status publication are asynchronous: a same-commit manual re-review has a short propagation window before its pending status appears.
+A new commit has no successful status until its own completion is verified.
+Status contexts are commit-scoped, as with other required GitHub status checks.
+
 ## Local entrypoints
 
 copilot-setup-steps.yml remains a local workflow with a job named copilot-setup-steps so its environment exists in the session Copilot will use.
