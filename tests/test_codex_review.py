@@ -37,14 +37,19 @@ class CodexReviewGateTests(unittest.TestCase):
     def run_gate(self, comments: object, *, resolved_sha: str = HEAD,
                  later_head: str = HEAD, fail_comments: bool = False,
                  draft: bool = False, state: str = "open", fail_statuses: int = 0,
-                 event: dict | None = None, previous_statuses: list | None = None
+                 event: dict | None = None, previous_statuses: list | None = None,
+                 later_base: str = "main", extra_pulls: list | None = None,
+                 later_extra_pulls: list | None = None, initial_head: str = HEAD
                  ) -> tuple[subprocess.CompletedProcess[str], list]:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             fixture = {"comments": comments, "resolved_sha": resolved_sha,
                        "later_head": later_head, "fail_comments": fail_comments,
                        "draft": draft, "state": state, "fail_statuses": fail_statuses,
-                       "previous_statuses": previous_statuses or []}
+                       "previous_statuses": previous_statuses or [], "later_base": later_base,
+                       "initial_head": initial_head,
+                       "extra_pulls": extra_pulls or [],
+                       "later_extra_pulls": extra_pulls or [] if later_extra_pulls is None else later_extra_pulls}
             (root / "fixture.json").write_text(json.dumps(fixture))
             (root / "event.json").write_text(json.dumps(event or {}))
             fake = root / "gh"
@@ -70,13 +75,27 @@ elif endpoint.endswith('/pulls/1'):
     count_path = root / 'pull-count'
     count = int(count_path.read_text()) if count_path.exists() else 0
     count_path.write_text(str(count + 1))
-    sha = 'a' * 40 if count == 0 else fixture['later_head']
-    print(json.dumps({'state': fixture['state'], 'draft': fixture['draft'],
-                      'head': {'sha': sha}, 'base': {'repo': {'full_name': 'fixture/repo'}}}))
+    sha = fixture['initial_head'] if count == 0 else fixture['later_head']
+    print(json.dumps({'number': 1, 'state': fixture['state'], 'draft': fixture['draft'],
+                      'head': {'sha': sha}, 'base': {'ref': 'main' if count == 0 else fixture['later_base'],
+                                                   'repo': {'full_name': 'fixture/repo'}}}))
+elif '/pulls?' in endpoint:
+    counter = root / 'list-count'
+    count = int(counter.read_text()) if counter.exists() else 0
+    counter.write_text(str(count + 1))
+    pulls = [{'number': 1, 'state': fixture['state'], 'draft': fixture['draft'],
+              'head': {'sha': fixture['initial_head'] if count == 0 else fixture['later_head']},
+              'base': {'ref': 'main' if count == 0 else fixture['later_base'],
+                       'repo': {'full_name': 'fixture/repo'}}}]
+    pulls += fixture['extra_pulls'] if count == 0 else fixture['later_extra_pulls']
+    print(json.dumps([[pull for pull in pulls if pull['state'] == 'open']]))
 elif '/comments?' in endpoint:
     if fixture['fail_comments']:
         sys.exit(1)
-    print(json.dumps(fixture['comments']))
+    number = int(endpoint.split('/issues/')[1].split('/')[0])
+    comments = fixture['comments'] if number == 1 else next(
+        pull['comments'] for pull in fixture['extra_pulls'] if pull['number'] == number)
+    print(json.dumps(comments))
 elif '/statuses?' in endpoint:
     print(json.dumps([fixture['previous_statuses']]))
 elif '/commits/' in endpoint:
@@ -182,7 +201,7 @@ else:
         _, statuses = self.run_gate([[summary()]], event=event)
         self.assertEqual(statuses[-1]["state"], "pending")
         for key, value in (("id", 1), ("login", "other[bot]"), ("type", "User")):
-            forged = copy.deepcopy(statuses[-1])
+            forged = copy.deepcopy(next(item for item in statuses if "[pr:1 request:" in item["description"]))
             forged["creator"][key] = value
             _, later = self.run_gate([[summary()]], previous_statuses=[forged])
             self.assertEqual(later[-1]["state"], "success")
@@ -220,3 +239,55 @@ else:
         self.assertEqual(statuses[-1]["state"], "pending")
         _, statuses = self.run_gate([[summary()]], state="closed")
         self.assertEqual(statuses, [])
+
+    def test_event_request_is_preserved_before_draft_or_api_failure(self) -> None:
+        for kwargs in ({"draft": True}, {"fail_comments": True}):
+            _, statuses = self.run_gate([[summary()]], event={"action": "deleted", "comment": request()}, **kwargs)
+            self.assertIn("[pr:1 request:2026-09-09T02:00:00Z]", statuses[0]["description"])
+            _, later = self.run_gate([[summary()]], previous_statuses=statuses)
+            self.assertEqual(later[-1]["state"], "pending")
+
+    def test_retarget_during_refresh_cannot_publish_success(self) -> None:
+        _, statuses = self.run_gate([[summary()]], later_base="release")
+        self.assertNotIn("success", [item["state"] for item in statuses])
+
+    def test_shared_head_requires_all_open_pull_requests_to_finish(self) -> None:
+        other = {"number": 2, "state": "open", "draft": False, "head": {"sha": HEAD},
+                 "base": {"ref": "release", "repo": {"full_name": "fixture/repo"}}, "comments": [[]]}
+        _, statuses = self.run_gate([[summary()]], extra_pulls=[other])
+        self.assertEqual(statuses[-1]["state"], "pending")
+        other["comments"] = [[summary()]]
+        result, statuses = self.run_gate([[summary()]], extra_pulls=[other])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(statuses[-1]["state"], "success")
+        other["draft"] = True
+        _, statuses = self.run_gate([[summary()]], extra_pulls=[other])
+        self.assertEqual(statuses[-1]["state"], "pending")
+        other["head"]["sha"] = "b" * 40
+        _, statuses = self.run_gate([[summary()]], extra_pulls=[other])
+        self.assertEqual(statuses[-1]["state"], "success")
+
+    def test_new_shared_head_pull_request_during_refresh_stays_pending(self) -> None:
+        other = {"number": 2, "state": "open", "draft": False, "head": {"sha": HEAD},
+                 "base": {"ref": "release", "repo": {"full_name": "fixture/repo"}}, "comments": [[]]}
+        _, statuses = self.run_gate([[summary()]], later_extra_pulls=[other])
+        self.assertNotIn("success", [item["state"] for item in statuses])
+
+    def test_closed_pull_refreshes_remaining_shared_head(self) -> None:
+        other = {"number": 2, "state": "open", "draft": False, "head": {"sha": HEAD},
+                 "base": {"ref": "release", "repo": {"full_name": "fixture/repo"}}, "comments": [[summary()]]}
+        result, statuses = self.run_gate([[summary()]], state="closed", extra_pulls=[other])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(statuses)
+        self.assertEqual(statuses[-1]["state"], "success")
+
+    def test_push_refreshes_reviews_remaining_on_previous_head(self) -> None:
+        other = {"number": 2, "state": "open", "draft": False, "head": {"sha": HEAD},
+                 "base": {"ref": "release", "repo": {"full_name": "fixture/repo"}}, "comments": [[summary()]]}
+        result, statuses = self.run_gate([[]], initial_head="b" * 40, later_head="b" * 40,
+                                         extra_pulls=[other], event={"action": "synchronize", "before": HEAD})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        previous = [item for item in statuses if item["sha"] == HEAD]
+        self.assertTrue(previous)
+        self.assertEqual(previous[-1]["state"], "success")
+        self.assertEqual([item for item in statuses if item["sha"] == "b" * 40][-1]["state"], "pending")

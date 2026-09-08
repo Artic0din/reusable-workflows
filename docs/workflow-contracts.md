@@ -115,6 +115,7 @@ An owner, member or collaborator's newer `@codex review` request invalidates old
 Completion must be in a later second than a request because comment timestamps cannot establish ordering within one second.
 Edited requests use their edit time, and the triggering event preserves a request even if its comment is removed.
 The latest request timestamp is retained in authenticated GitHub Actions status descriptions for that PR and commit, so later refreshes cannot forget a deleted request.
+Triggering requests are persisted before draft handling and fallible list or comment reads.
 A PR base-branch change also invalidates earlier completion, even when its head SHA is unchanged; title and body edits do not.
 Untrusted commenters cannot hold the gate by posting review requests that Codex would not honor.
 
@@ -122,17 +123,19 @@ Keep required review-conversation resolution enabled independently: completed co
 Enable Codex Review all PRs and On every push before requiring this status.
 Do not silently pass when Codex is unavailable or its summary format changes.
 
-Callers own the triggers and per-PR concurrency group, with cancel-in-progress: false and queue: max.
+Callers serialize gate jobs repository-wide, after the trusted-event job condition, with cancel-in-progress: false and queue: max.
 The default single pending run can discard a base-change or deleted-request event before its invalidation is persisted.
 GitHub queues up to 100 pending runs with queue: max; monitor cancelled runs and retry dropped invalidations if this platform limit is reached.
-Use pull_request_target for opened, reopened, synchronize, edited and ready_for_review events; the gate reads GitHub metadata only.
+Use pull_request_target for opened, reopened, synchronize, edited, ready_for_review, converted_to_draft and closed events; the gate reads GitHub metadata only.
 Also handle created, edited and deleted issue_comment events on pull requests when the author is Codex, or a trusted contributor is requesting a review.
 Include workflow_dispatch with a required pull-request-number input to initialize existing PRs and recover missed events.
 Comment events load the caller from its default branch, so merge the caller before relying on them.
 GitHub event delivery, runner startup, and status publication are asynchronous: a same-commit manual re-review has a short propagation window before its pending status appears.
 If GitHub's API remains unavailable, no workflow can replace an already-published status; the failed run must be retried after service recovers.
 A new commit has no successful status until its own completion is verified.
-Status contexts are commit-scoped, as with other required GitHub status checks.
+Status contexts are commit-scoped, so all open PRs sharing a head must have completed code review before that commit succeeds.
+The gate rechecks the entire matching PR set, base identities, heads and draft states before publication.
+Closing or pushing one PR also refreshes any remaining PRs on its previous head.
 
 ## Local entrypoints
 
