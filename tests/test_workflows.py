@@ -119,6 +119,9 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("Prefetch pull-request review context", source_text)
         self.assertIn("/tmp/gh-aw/agent/pr-diff.patch", source_text)
         self.assertIn("compare/$current_base_sha...$current_head_sha", source_text)
+        self.assertIn(r"\.github\/workflows\/.*\.lock\.yml", source_text)
+        self.assertIn(r"\.github\/aw\/actions-lock\.json", source_text)
+        self.assertIn("Do not install packages, run tests", source_text)
 
         lock_text = (ROOT / ".github/workflows/skills-reviewer.lock.yml").read_text()
         self.assertIn('\"compiler_version\":\"v0.88.2\"', lock_text.splitlines()[0])

@@ -183,6 +183,7 @@ Provider and agent failures remain visible in the workflow run but do not create
 It cannot push code, merge, approve, or change repository settings.
 
 Before the agent starts, a deterministic step fetches the current base and head metadata, an exact-SHA diff capped at 3000 lines, existing review comments, and existing reviews.
+It removes generated workflow output and common dependency lock files from the review diff before applying the cap.
 The agent reads that local context and uses the GitHub pull-request tool only for its final base-and-head check, keeping model invocations bounded.
 
 The five Matt Pocock skills are pinned to one reviewed full commit SHA.

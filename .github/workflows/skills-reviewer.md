@@ -59,6 +59,14 @@ steps:
       gh api \
         -H "Accept: application/vnd.github.v3.diff" \
         "repos/$PR_REPOSITORY/compare/$current_base_sha...$current_head_sha" \
+        | awk '
+            /^diff --git / {
+              skip = ($0 ~ / b\/\.github\/workflows\/.*\.lock\.yml$/ ||
+                      $0 ~ / b\/\.github\/aw\/actions-lock\.json$/ ||
+                      $0 ~ / b\/(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|uv\.lock|poetry\.lock|Cargo\.lock|Podfile\.lock|Gemfile\.lock|composer\.lock|Package\.resolved)$/)
+            }
+            !skip { print }
+          ' \
         | sed -n '1,3000p' > "$context_dir/pr-diff.patch"
 
       gh api \
@@ -109,6 +117,8 @@ Stay concise and produce no generic praise.
    - tests only: `/tdd`
    - documentation, instructions, or workflow policy: `/grill-with-docs` and `/codebase-design`
 4. Read repository instructions and only the changed code needed to verify each candidate issue.
+   Do not install packages, run tests, search the whole filesystem, or inspect generated and dependency lock files.
+   Use existing source and tests as evidence; CI owns command execution.
 5. Check existing review comments before posting so the workflow does not duplicate an earlier finding.
 6. Use the GitHub pull-request tool once to verify the live base and head immediately before submitting output.
    Compare them with `baseRefOid` and `headRefOid` in `/tmp/gh-aw/agent/pr-meta.json`.
