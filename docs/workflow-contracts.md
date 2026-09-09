@@ -175,7 +175,7 @@ Its concurrency policy cancels an older run when the same pull request receives 
 It verifies the live head before review output and instructs stale runs to finish without comments.
 
 The workflow grants read access to contents and pull requests plus `copilot-requests: write` for the agent engine.
-Safe output processing receives only the generated pull-request write permission needed to create at most ten inline comments and one overall review.
+The generated safe-output jobs receive `pull-requests: write` for at most ten inline comments and one overall review, plus `issues: write` for gh-aw's incomplete-run reporting path.
 It cannot push code, merge, approve, or change repository settings.
 
 The five Matt Pocock skills are pinned to one reviewed full commit SHA.
