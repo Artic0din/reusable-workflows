@@ -30,7 +30,48 @@ tools:
   github:
     toolsets:
       - pull_requests
-      - repos
+steps:
+  - name: Prefetch pull-request review context
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_REPOSITORY: ${{ github.repository }}
+      TRIGGER_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    run: |
+      set -euo pipefail
+      context_dir=/tmp/gh-aw/agent
+      mkdir -p "$context_dir"
+
+      gh pr view "$PR_NUMBER" \
+        --repo "$PR_REPOSITORY" \
+        --json number,title,body,baseRefOid,headRefName,headRefOid,additions,deletions,changedFiles,files \
+        > "$context_dir/pr-meta.json"
+
+      current_head_sha=$(jq -r '.headRefOid' "$context_dir/pr-meta.json")
+      if [ "$current_head_sha" != "$TRIGGER_HEAD_SHA" ]; then
+        jq -cn \
+          --arg message "Skipped stale pull-request head $TRIGGER_HEAD_SHA; current head is $current_head_sha." \
+          '{noop: {message: $message}}' >> "$GH_AW_SAFE_OUTPUTS"
+        exit 0
+      fi
+
+      current_base_sha=$(jq -r '.baseRefOid' "$context_dir/pr-meta.json")
+      gh api \
+        -H "Accept: application/vnd.github.v3.diff" \
+        "repos/$PR_REPOSITORY/compare/$current_base_sha...$current_head_sha" \
+        | sed -n '1,3000p' > "$context_dir/pr-diff.patch"
+
+      gh api \
+        --paginate \
+        "repos/$PR_REPOSITORY/pulls/$PR_NUMBER/comments?per_page=100" \
+        --jq '.[] | {id, path, line: (.line // .original_line), body: .body[:500], user: .user.login}' \
+        | jq -s '.' > "$context_dir/pr-review-comments.json"
+
+      gh api \
+        --paginate \
+        "repos/$PR_REPOSITORY/pulls/$PR_NUMBER/reviews?per_page=100" \
+        --jq '.[] | {id, state, body: .body[:500], commit_id, user: .user.login}' \
+        | jq -s '.' > "$context_dir/pr-reviews.json"
 safe-outputs:
   create-pull-request-review-comment:
     max: 10
@@ -39,6 +80,7 @@ safe-outputs:
   noop:
     report-as-issue: false
   report-failed-jobs: false
+  report-failure-as-issue: false
 timeout-minutes: 15
 strict: true
 ---
@@ -55,9 +97,11 @@ Stay concise and produce no generic praise.
 
 ## Review process
 
-1. Fetch the pull request metadata, changed files, patch, existing review comments, and existing reviews with the GitHub tools.
-2. Confirm that the live pull request head still equals `${{ github.event.pull_request.head.sha }}`.
-   If it changed, call `noop` because the synchronize event for the newer head must own the review.
+1. Read the pre-fetched review context from `/tmp/gh-aw/agent/pr-meta.json`,
+   `/tmp/gh-aw/agent/pr-diff.patch`, `/tmp/gh-aw/agent/pr-review-comments.json`,
+   and `/tmp/gh-aw/agent/pr-reviews.json`.
+   Do not fetch this data again with GitHub tools.
+2. Treat a 3000-line patch as intentionally truncated and focus on the highest-impact changed files represented in it.
 3. Classify the change and apply one or two relevant skills:
    - bug fix or performance regression: `/diagnosing-bugs` and `/tdd`
    - new behavior: `/tdd` and `/grill-with-docs`
@@ -66,8 +110,9 @@ Stay concise and produce no generic praise.
    - documentation, instructions, or workflow policy: `/grill-with-docs` and `/codebase-design`
 4. Read repository instructions and only the changed code needed to verify each candidate issue.
 5. Check existing review comments before posting so the workflow does not duplicate an earlier finding.
-6. Re-fetch the pull request and verify the same head immediately before submitting output.
-   If it changed, call `noop`.
+6. Use the GitHub pull-request tool once to verify the live base and head immediately before submitting output.
+   Compare them with `baseRefOid` and `headRefOid` in `/tmp/gh-aw/agent/pr-meta.json`.
+   If either changed, call `noop`.
 
 ## Finding rules
 

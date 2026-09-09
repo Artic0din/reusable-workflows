@@ -178,8 +178,12 @@ Fork pull requests and untrusted actors are intentionally outside this workflow'
 
 The workflow grants read access to contents and pull requests plus `copilot-requests: write` for the agent engine.
 The generated safe-output jobs receive `pull-requests: write` for at most ten inline comments and one overall review.
-They also receive `issues: write` because gh-aw can report missing tools or data, incomplete runs, and agent failures as issues.
+They also receive `issues: write` because gh-aw can report missing tools or data and incomplete runs as issues.
+Provider and agent failures remain visible in the workflow run but do not create repository issues.
 It cannot push code, merge, approve, or change repository settings.
+
+Before the agent starts, a deterministic step fetches the current base and head metadata, an exact-SHA diff capped at 3000 lines, existing review comments, and existing reviews.
+The agent reads that local context and uses the GitHub pull-request tool only for its final base-and-head check, keeping model invocations bounded.
 
 The five Matt Pocock skills are pinned to one reviewed full commit SHA.
 The reviewer selects one or two methods for each change, checks existing comments, skips generated and lock files, and reports only verified issues on changed lines.
