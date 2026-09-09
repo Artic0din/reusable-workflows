@@ -8,6 +8,8 @@ description: Reviews current same-repository maintainer pull-request heads with 
       - reopened
       - synchronize
       - ready_for_review
+      - edited
+      - closed
 permissions:
   contents: read
   pull-requests: read
@@ -37,15 +39,34 @@ steps:
       PR_NUMBER: ${{ github.event.pull_request.number }}
       PR_REPOSITORY: ${{ github.repository }}
       TRIGGER_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      EVENT_ACTION: ${{ github.event.action }}
+      BASE_CHANGED_FROM: ${{ github.event.changes.base.ref.from || '' }}
+      GH_AW_SAFE_OUTPUTS: ${{ steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS }}
     run: |
       set -euo pipefail
       context_dir=/tmp/gh-aw/agent
       mkdir -p "$context_dir"
+      mkdir -p "$(dirname "$GH_AW_SAFE_OUTPUTS")"
 
       gh pr view "$PR_NUMBER" \
         --repo "$PR_REPOSITORY" \
-        --json number,title,body,baseRefOid,headRefName,headRefOid,additions,deletions,changedFiles,files \
+        --json number,title,body,state,baseRefOid,headRefName,headRefOid,additions,deletions,changedFiles,files \
         > "$context_dir/pr-meta.json"
+
+      current_state=$(jq -r '.state' "$context_dir/pr-meta.json")
+      if [ "$EVENT_ACTION" = "closed" ] || [ "$current_state" != "OPEN" ]; then
+        jq -cn \
+          --arg message "Skipped pull request in $current_state state." \
+          '{noop: {message: $message}}' >> "$GH_AW_SAFE_OUTPUTS"
+        exit 1
+      fi
+
+      if [ "$EVENT_ACTION" = "edited" ] && [ -z "$BASE_CHANGED_FROM" ]; then
+        jq -cn \
+          --arg message "Skipped pull-request edit because its base branch did not change." \
+          '{noop: {message: $message}}' >> "$GH_AW_SAFE_OUTPUTS"
+        exit 1
+      fi
 
       current_head_sha=$(jq -r '.headRefOid' "$context_dir/pr-meta.json")
       if [ "$current_head_sha" != "$TRIGGER_HEAD_SHA" ]; then
@@ -63,7 +84,7 @@ steps:
             /^diff --git / {
               skip = ($0 ~ / b\/\.github\/workflows\/.*\.lock\.yml$/ ||
                       $0 ~ / b\/\.github\/aw\/actions-lock\.json$/ ||
-                      $0 ~ / b\/(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|uv\.lock|poetry\.lock|Cargo\.lock|Podfile\.lock|Gemfile\.lock|composer\.lock|Package\.resolved)$/)
+                      $0 ~ / b\/([^\/]+\/)*(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|uv\.lock|poetry\.lock|Cargo\.lock|Podfile\.lock|Gemfile\.lock|composer\.lock|Package\.resolved)$/)
             }
             !skip { print }
           ' \
@@ -74,6 +95,12 @@ steps:
         "repos/$PR_REPOSITORY/pulls/$PR_NUMBER/comments?per_page=100" \
         --jq '.[] | {id, path, line: (.line // .original_line), body: .body[:500], user: .user.login}' \
         | jq -s '.' > "$context_dir/pr-review-comments.json"
+
+      gh api \
+        --paginate \
+        "repos/$PR_REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" \
+        --jq '.[] | {id, body: .body[:500], user: .user.login}' \
+        | jq -s '.' > "$context_dir/pr-issue-comments.json"
 
       gh api \
         --paginate \
@@ -107,7 +134,7 @@ Stay concise and produce no generic praise.
 
 1. Read the pre-fetched review context from `/tmp/gh-aw/agent/pr-meta.json`,
    `/tmp/gh-aw/agent/pr-diff.patch`, `/tmp/gh-aw/agent/pr-review-comments.json`,
-   and `/tmp/gh-aw/agent/pr-reviews.json`.
+   `/tmp/gh-aw/agent/pr-issue-comments.json`, and `/tmp/gh-aw/agent/pr-reviews.json`.
    Do not fetch this data again with GitHub tools.
 2. Treat a 3000-line patch as intentionally truncated and focus on the highest-impact changed files represented in it.
 3. Classify the change and apply one or two relevant skills:
@@ -120,9 +147,9 @@ Stay concise and produce no generic praise.
    Do not install packages, run tests, search the whole filesystem, or inspect generated and dependency lock files.
    Use existing source and tests as evidence; CI owns command execution.
 5. Check existing review comments before posting so the workflow does not duplicate an earlier finding.
-6. Use the GitHub pull-request tool once to verify the live base and head immediately before submitting output.
-   Compare them with `baseRefOid` and `headRefOid` in `/tmp/gh-aw/agent/pr-meta.json`.
-   If either changed, call `noop`.
+6. Use the GitHub pull-request tool once to verify the live state, base, and head immediately before submitting output.
+   Compare the state with `OPEN` and the commits with `baseRefOid` and `headRefOid` in `/tmp/gh-aw/agent/pr-meta.json`.
+   If the pull request closed or either commit changed, call `noop`.
 
 ## Finding rules
 

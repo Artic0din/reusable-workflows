@@ -14,6 +14,7 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Fixed
 
+- Stopped stale, closed, and unrelated pull-request edit runs before agent execution, initialized their safe-output path, deduplicated against issue comments, and excluded nested dependency locks before truncating review context.
 - Rechecked dependency pull-request targets after metadata verification before enabling automatic merges.
 - Serialized dependency auto-merge attempts within the shared workflow and retained pending validations when delayed events arrive.
 - Cleared earlier automatic merge requests before verifying dependency updates.

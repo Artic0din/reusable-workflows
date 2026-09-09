@@ -170,9 +170,10 @@ Edit the Markdown source and regenerate the lock with the gh-aw version recorded
 The repository excludes generated locks from formatting-only yamllint rules and generator-owned zizmor findings while actionlint and gh-aw continue to validate executable syntax and policy.
 The pinned actionlint predates `copilot-requests` and gh-aw's generated `queue` extension, so path-specific ignores suppress only those two unknown-key diagnostics for this lock.
 
-The workflow runs for opened, reopened, synchronized, and ready-for-review pull requests.
-Its concurrency policy cancels an older run when the same pull request receives a newer commit.
-It verifies the live head before review output and instructs stale runs to finish without comments.
+The workflow runs for opened, reopened, synchronized, ready-for-review, edited, and closed pull requests.
+Edited events proceed only when the base branch changed, while closed events cancel an older run and stop before agent execution.
+Its concurrency policy cancels an older run when the same pull request receives a newer event.
+It verifies the live state and head before review output and instructs closed or stale runs to finish without comments.
 gh-aw's strict activation guard runs this configuration only for same-repository pull requests initiated by an actor with write, maintain, or admin access.
 Fork pull requests and untrusted actors are intentionally outside this workflow's contract.
 
@@ -182,8 +183,8 @@ They also receive `issues: write` because gh-aw can report missing tools or data
 Provider and agent failures remain visible in the workflow run but do not create repository issues.
 It cannot push code, merge, approve, or change repository settings.
 
-Before the agent starts, a deterministic step fetches the current base and head metadata, an exact-SHA diff capped at 3000 lines, existing review comments, and existing reviews.
-It removes generated workflow output and common dependency lock files from the review diff before applying the cap.
+Before the agent starts, a deterministic step fetches the current state, base and head metadata, an exact-SHA diff capped at 3000 lines, existing review comments, issue comments, and reviews.
+It removes generated workflow output and common dependency lock files at the repository root or below package directories from the review diff before applying the cap.
 The agent reads that local context and uses the GitHub pull-request tool only for its final base-and-head check, keeping model invocations bounded.
 
 The five Matt Pocock skills are pinned to one reviewed full commit SHA.
@@ -191,7 +192,7 @@ The reviewer selects one or two methods for each change, checks existing comment
 Buffered inline comments are submitted as a non-blocking `COMMENT` review, and the workflow does not expose a review-decision tool that could approve or request changes.
 Deletion-only findings go in the pull-request summary comment because the generated inline-comment handler targets right-side diff lines.
 No-finding runs use a silent `noop` rather than creating an issue or praise comment.
-Stale-head runs queue the same `noop` and then fail the prefetch step so the agent cannot run against mixed context.
+Closed, unrelated-edit, and stale-head runs queue the same `noop` and then fail the prefetch step so the agent cannot run against invalid or mixed context.
 
 The workflow is advisory until a real consumer run proves the installed Copilot entitlement, generated check context, current-head behavior, and review output.
 If its workflow check becomes required, keep required review-thread resolution enabled because a successful run can still create unresolved findings.
