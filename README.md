@@ -1,6 +1,6 @@
 # Reusable workflows
 
-Shared GitHub Actions checks and scoped agent skills for repositories maintained under Artic0din and plaintextlab.
+Shared GitHub Actions checks and scoped agent skills for repositories maintained under Artic0din and Plaintext-Lab.
 Each caller selects the checks it needs and retains its own application behavior, events, required checks, and secrets.
 
 ## Installation
@@ -27,6 +27,7 @@ CodeQL eligibility and dependency auto-merge activation remain caller-owned.
 | Explicitly enabled CodeQL | [.github/workflows/codeql-analysis.yml](.github/workflows/codeql-analysis.yml) |
 | Verified, opt-in Dependabot auto-merge | [.github/workflows/dependabot-automerge.yml](.github/workflows/dependabot-automerge.yml) |
 | Redacted history secret scanning | [.github/workflows/secret-scan.yml](.github/workflows/secret-scan.yml) |
+| Current-commit Codex code-review completion | [.github/workflows/codex-review-gate.yml](.github/workflows/codex-review-gate.yml) |
 
 [validate-self.yml](.github/workflows/validate-self.yml) contains executable caller examples, including Python/npm and generated-output fixtures.
 [Consumer setup](docs/consumer-setup.md) covers external wiring, Copilot, Dependabot, updates, and rollback.
@@ -43,6 +44,8 @@ Copy the selected skill folders into the caller's .github/skills, adapt reposito
 The README agent also needs its linked readme-docs skill.
 For agents that do not discover .github/skills, add explicit links in the caller's existing instruction file.
 Do not copy this repository's entire agent policy over a project's instructions.
+The [rollout skill](.github/skills/rollout-repositories/SKILL.md) onboards selected repositories and prepares future update PRs.
+The [skill-update helper](docs/skill-updates.md) preserves consumer adaptations with three-way merges and refuses conflicts before writing.
 
 ## Development
 

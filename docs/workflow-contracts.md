@@ -83,9 +83,17 @@ Before queueing, it checks current repository auto-merge/squash settings, strict
 Other committers fail closed, including signed human commits attributed to Dependabot.
 The complete paginated commit count must match the live PR.
 Only minor/patch updates with no maintainer changes qualify.
+Branches requiring GitHub's merge queue are unsupported and rejected during preflight before queueing.
+Preflight requires the live pull request's isMergeQueueEnabled field to be exactly false, covering effective branch protection as well as rulesets.
+This workflow manages native automatic merge requests; it does not dequeue merge-queue entries.
+Shared-workflow updates and missing metadata require manual review.
+The queue step records eligibility only after all guards and the merge request succeed.
+The first step clears an earlier automatic merge request for the matching live Dependabot head before potentially slow API and metadata checks; a new request can be enabled only after successful verification.
+Both cancellation paths recheck the live head and identity, so stale events leave newer requests intact.
+A separate cleanup step revokes an existing request unless the job, metadata and queue step all succeeded with that positive result.
+Cleanup runs after failures or cancellation and cannot enable a merge.
+With enabled set to false, verification and queueing are skipped while cancellation still runs on matching Dependabot events.
 The merge command pins the expected head and respects GitHub protections.
-If that command does not succeed, an always-run cleanup step disables any existing auto-merge request for the open PR.
-This includes failed eligibility or metadata checks, skipped major/maintainer updates, cancelled steps and ambiguous queue failures.
 The cleanup reads current state independently of the guard's temporary files, avoids writes when auto-merge is already disabled or the PR is closed, and reports API failures instead of suppressing them.
 The job serializes all attempts for each repository/PR with a library-owned `reusable-dependabot-automerge-` concurrency group and does not cancel an active attempt.
 It uses `queue: max` so delayed older events cannot replace a waiting current-head validation.
@@ -100,7 +108,7 @@ Remove this exception when the pinned actionlint supports `queue`; other syntax 
 There is no checkout, execution of PR code, automatic approval, or protection bypass.
 GitHub may merge immediately if all configured requirements already pass.
 Do not enable this capability until the caller's effective rules and its intended review requirements are verified.
-Fixture tests validate the guard and queued-state cleanup; an actual eligible dependency PR is needed to prove live operation.
+Fixture tests execute both queueing and cancellation; an actual eligible dependency PR is needed to prove live operation.
 
 ## Secret scan
 
@@ -109,6 +117,47 @@ The Linux binary is release-pinned and checked against its verified SHA-256 dige
 Caller Gitleaks configuration is honored, so review any allowlists as part of normal code review.
 Existing findings also fail; this workflow does not silently create a baseline or suppress results.
 Changing the release requires updating and verifying its digest together.
+
+## Codex review completion
+
+codex-review-gate.yml requires a positive integer pull-request-number and caller permissions contents: read, issues: read, pull-requests: read, and statuses: write.
+It does not check out code, execute pull-request content, approve reviews, merge changes, or receive publishing credentials.
+The public workflow source must be pinned to a reviewed full commit SHA in the caller.
+
+The workflow publishes the commit-status context `Codex review complete`.
+Require this exact context from GitHub Actions after verifying a real consumer run; the workflow job's own success is not the completion signal.
+Missing, running or stale code-review evidence stays pending.
+Failed, cancelled, unknown or malformed evidence cannot pass.
+Status writes retry transient failures; verification errors attempt to publish an error status, including when the initial pending write fails.
+Completed review passes only after its abbreviated commit resolves through GitHub to the full current head and the head is rechecked before publication.
+Only the authenticated `chatgpt-codex-connector[bot]` account, including its numeric account ID and bot type, can supply evidence.
+The separate Security Review row cannot satisfy Code Review completion.
+The latest summary and all pages of comments are considered.
+An owner, member or collaborator's newer `@codex review` request invalidates older completion evidence.
+Completion must be in a later second than a request because comment timestamps cannot establish ordering within one second.
+Edited requests use their edit time, and the triggering event preserves a request even if its comment is removed.
+The latest request timestamp is retained in authenticated GitHub Actions status descriptions for that PR and commit, so later refreshes cannot forget a deleted request.
+Triggering requests are persisted before draft handling and fallible list or comment reads.
+A PR base-branch change also invalidates earlier completion, even when its head SHA is unchanged; title and body edits do not.
+Untrusted commenters cannot hold the gate by posting review requests that Codex would not honor.
+
+Keep required review-conversation resolution enabled independently: completed code review can contain findings and does not mean approval.
+Enable Codex Review all PRs and On every push before requiring this status.
+Do not silently pass when Codex is unavailable or its summary format changes.
+
+Callers serialize gate jobs repository-wide, after the trusted-event job condition, with cancel-in-progress: false and queue: max.
+The default single pending run can discard a base-change or deleted-request event before its invalidation is persisted.
+GitHub queues up to 100 pending runs with queue: max; monitor cancelled runs and retry dropped invalidations if this platform limit is reached.
+Use pull_request_target for opened, reopened, synchronize, edited, ready_for_review, converted_to_draft and closed events; the gate reads GitHub metadata only.
+Also handle created, edited and deleted issue_comment events on pull requests when the author is Codex, or a trusted contributor is requesting a review.
+Include workflow_dispatch with a required pull-request-number input to initialize existing PRs and recover missed events.
+Comment events load the caller from its default branch, so merge the caller before relying on them.
+GitHub event delivery, runner startup, and status publication are asynchronous: a same-commit manual re-review has a short propagation window before its pending status appears.
+If GitHub's API remains unavailable, no workflow can replace an already-published status; the failed run must be retried after service recovers.
+A new commit has no successful status until its own completion is verified.
+Status contexts are commit-scoped, so all open PRs sharing a head must have completed code review before that commit succeeds.
+The gate rechecks the entire matching PR set, base identities, heads and draft states before publication.
+Closing or pushing one PR also refreshes any remaining PRs on its previous head.
 
 ## Local entrypoints
 

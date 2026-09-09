@@ -29,7 +29,8 @@ def required_rules() -> list[dict[str, object]]:
 class DependencyGuardTests(unittest.TestCase):
     def run_guard(self, *, rules: object = None, checks: object = None,
                   commits: object = None, pull_overrides: dict[str, object] | None = None,
-                  enabled: bool = True) -> subprocess.CompletedProcess[str]:
+                  enabled: bool = True, queue_response: dict[str, object] | None = None,
+                  queue_exit: int = 0) -> subprocess.CompletedProcess[str]:
         pull = {"state": "open", "draft": False, "user": {"login": "dependabot[bot]"},
                 "head": {"sha": HEAD, "repo": {"full_name": "fixture/repo"}},
                 "base": {"ref": "main", "repo": {"full_name": "fixture/repo"}}, "commits": 1}
@@ -41,11 +42,14 @@ class DependencyGuardTests(unittest.TestCase):
                 "rules": required_rules() if rules is None else rules,
                 "pull": pull,
                 "commits": [[bot_commit()]] if commits is None else commits,
+                "merge-queue": ({"data": {"repository": {"pullRequest": {"isMergeQueueEnabled": False}}}}
+                                if queue_response is None else queue_response),
             }
             for name, value in payloads.items():
                 (root / f"fixture-{name}.json").write_text(json.dumps(value))
             executable = root / "gh"
             executable.write_text('#!/bin/sh\ncase "$*" in\n'
+                                  '"api graphql"*) cat "$FIXTURES/fixture-merge-queue.json"; exit "$QUEUE_EXIT" ;;\n'
                                   '*/commits*) cat "$FIXTURES/fixture-commits.json" ;;\n'
                                   '*/pulls/*) cat "$FIXTURES/fixture-pull.json" ;;\n'
                                   '*/rules/branches/*) cat "$FIXTURES/fixture-rules.json" ;;\n'
@@ -54,7 +58,8 @@ class DependencyGuardTests(unittest.TestCase):
             environment = dict(os.environ, PATH=f'{root}{os.pathsep}{os.environ["PATH"]}',
                                FIXTURES=str(root), REPOSITORY="fixture/repo", BASE_BRANCH="main",
                                RUNNER_TEMP=str(root), PR_NUMBER="1", PR_HEAD_SHA=HEAD,
-                               REQUIRED_CHECKS=json.dumps(CHECKS if checks is None else checks))
+                               REQUIRED_CHECKS=json.dumps(CHECKS if checks is None else checks),
+                               QUEUE_EXIT=str(queue_exit))
             return subprocess.run(
                 ["bash", "-euo", "pipefail", "-c",
                  workflow_step("dependabot-automerge.yml", "Verify current merge eligibility")],
@@ -87,6 +92,20 @@ class DependencyGuardTests(unittest.TestCase):
         for case in cases:
             with self.subTest(case=case):
                 self.assertNotEqual(self.run_guard(pull_overrides=case).returncode, 0)
+
+    def test_required_merge_queue_callers_are_rejected(self) -> None:
+        rules = required_rules() + [{"type": "merge_queue", "parameters": {}}]
+        result = self.run_guard(rules=rules)
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_effective_merge_queue_must_be_explicitly_disabled(self) -> None:
+        responses = [{}, {"errors": [{"message": "unavailable"}]}]
+        responses += [{"data": {"repository": {"pullRequest": {"isMergeQueueEnabled": state}}}}
+                      for state in (True, None, "false")]
+        for response in responses:
+            with self.subTest(response=response):
+                self.assertNotEqual(self.run_guard(queue_response=response).returncode, 0)
+        self.assertNotEqual(self.run_guard(queue_exit=7).returncode, 0)
 
     def test_unverified_human_incomplete_and_malformed_commits_fail(self) -> None:
         human = bot_commit()
