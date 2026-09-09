@@ -1,4 +1,6 @@
 extends: default
+ignore: |
+  .github/workflows/*.lock.yml
 rules:
   document-start: disable
   line-length:

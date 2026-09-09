@@ -6,6 +6,7 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Added
 
+- Added a repository-local engineering review workflow with five commit-pinned skills, current-head checks, bounded inline findings, and a generated gh-aw lock.
 - Added a Codex completion status that waits for authenticated code-review evidence on the current pull-request commit.
 - Added an explicit repository rollout skill and a tested three-way update helper for tailored consumer skills.
 - Added configurable repository checks, Python/npm CI, generated-output verification, CodeQL, guarded dependency automation, and local setup examples.

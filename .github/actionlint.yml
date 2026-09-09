@@ -3,3 +3,9 @@ paths:
     ignore:
       # Temporary: actionlint 1.7.12 predates GitHub's queue property; regression tests validate its value.
       - '^unexpected key "queue" for "concurrency" section\. expected one of "cancel-in-progress", "group"$'
+  .github/workflows/skills-reviewer.lock.yml:
+    ignore:
+      # Temporary: actionlint 1.7.12 predates GitHub Copilot's documented permission scope.
+      - '^unknown permission scope "copilot-requests"\.'
+      # gh-aw emits GitHub's queue extension for generated safe-output serialization.
+      - '^unexpected key "queue" for "concurrency" section\. expected one of "cancel-in-progress", "group"$'

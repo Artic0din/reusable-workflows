@@ -52,6 +52,27 @@ Existing strong project instructions should be retained.
 Record selected source files and their original revision in the consumer's .github/reusable-skills.json.
 Use [skill updates](skill-updates.md) and the [rollout skill](../.github/skills/rollout-repositories/SKILL.md) to prepare later update PRs while preserving local adaptations.
 
+## Install the engineering skills reviewer
+
+Copy `.github/workflows/skills-reviewer.md`, `.github/workflows/skills-reviewer.lock.yml`, `.github/aw/actions-lock.json`, and the lock-file rule from `.gitattributes` into the consumer.
+Review the Markdown source against the consumer's instructions and adapt only the prompt or trigger policy.
+Do not edit the generated lock.
+If the consumer applies formatting or source-oriented security rules to generated YAML, add narrow path-specific exclusions for the lock while retaining gh-aw compilation and actionlint validation.
+
+When the source changes, install the gh-aw CLI version recorded in the lock metadata and regenerate from the repository root:
+
+```sh
+gh aw compile skills-reviewer --approve --action-mode action --action-tag v0.88.2 --validate --no-check-update
+```
+
+Commit the source and regenerated files together.
+The consumer needs GitHub Copilot agentic workflow access; the generated workflow uses the caller's `GITHUB_TOKEN` and declares its own least-privilege job permissions.
+Run a real pull request before treating its check as required.
+Keep existing human, Copilot, Codex, and required-thread policies until the new reviewer has been observed on both a clean change and an actionable finding.
+
+The copied workflow pair is separate from `.github/reusable-skills.json` because that manifest tracks tailored instruction skills only.
+Record its library source revision in the rollout pull-request body and use the normal workflow update path for later releases.
+
 ## Dependency maintenance
 
 Keep a local Dependabot github-actions entry so external reusable-workflow references receive updates.

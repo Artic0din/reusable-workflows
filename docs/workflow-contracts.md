@@ -162,6 +162,29 @@ Status contexts are commit-scoped, so all open PRs sharing a head must have comp
 The gate rechecks the entire matching PR set, base identities, heads and draft states before publication.
 Closing or pushing one PR also refreshes any remaining PRs on its previous head.
 
+## Engineering skills reviewer
+
+`skills-reviewer.md` is the maintained gh-aw source and `skills-reviewer.lock.yml` is its generated executable workflow.
+Keep the pair in the consuming repository because pull-request event workflows must be present on the caller's default branch and cannot be delivered through a job-level `workflow_call`.
+Edit the Markdown source and regenerate the lock with the gh-aw version recorded in its metadata; never edit the lock directly.
+The repository excludes generated locks from formatting-only yamllint rules and generator-owned zizmor findings while actionlint and gh-aw continue to validate executable syntax and policy.
+The pinned actionlint predates `copilot-requests` and gh-aw's generated `queue` extension, so path-specific ignores suppress only those two unknown-key diagnostics for this lock.
+
+The workflow runs for opened, reopened, synchronized, and ready-for-review pull requests.
+Its concurrency policy cancels an older run when the same pull request receives a newer commit.
+It verifies the live head before review output and instructs stale runs to finish without comments.
+
+The workflow grants read access to contents and pull requests plus `copilot-requests: write` for the agent engine.
+Safe output processing receives only the generated pull-request write permission needed to create at most ten inline comments and one overall review.
+It cannot push code, merge, approve, or change repository settings.
+
+The five Matt Pocock skills are pinned to one reviewed full commit SHA.
+The reviewer selects one or two methods for each change, checks existing comments, skips generated and lock files, and reports only verified issues on changed lines.
+No-finding and stale-head runs use a silent `noop` rather than creating an issue or praise comment.
+
+The workflow is advisory until a real consumer run proves the installed Copilot entitlement, generated check context, current-head behavior, and review output.
+If its workflow check becomes required, keep required review-thread resolution enabled because a successful run can still create unresolved findings.
+
 ## Local entrypoints
 
 copilot-setup-steps.yml remains a local workflow with a job named copilot-setup-steps so its environment exists in the session Copilot will use.

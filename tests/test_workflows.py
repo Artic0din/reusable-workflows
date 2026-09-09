@@ -1,7 +1,8 @@
 """Run the actual workflow shell steps against isolated consumer repositories."""
-import os
 import json
+import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -98,6 +99,34 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertEqual(checkout["with"]["repository"], "Artic0din/reusable-workflows")
         self.assertRegex(checkout["with"]["ref"], r"^[0-9a-f]{40}$")
         self.assertFalse(checkout["with"]["persist-credentials"])
+
+    def test_skills_reviewer_is_current_head_bounded_and_pinned(self) -> None:
+        source_text = (ROOT / ".github/workflows/skills-reviewer.md").read_text()
+        frontmatter = yaml.safe_load(source_text.split("---", 2)[1])
+        self.assertEqual(
+            frontmatter["on"]["pull_request"]["types"],
+            ["opened", "reopened", "synchronize", "ready_for_review"],
+        )
+        self.assertEqual(frontmatter["permissions"], {
+            "contents": "read",
+            "pull-requests": "read",
+            "copilot-requests": "write",
+        })
+        self.assertEqual(frontmatter["safe-outputs"]["create-pull-request-review-comment"]["max"], 10)
+        self.assertFalse(frontmatter["safe-outputs"]["noop"]["report-as-issue"])
+        self.assertTrue(all(re.search(r"@[0-9a-f]{40}$", skill) for skill in frontmatter["skills"]))
+
+        lock_text = (ROOT / ".github/workflows/skills-reviewer.lock.yml").read_text()
+        self.assertIn('\"compiler_version\":\"v0.88.2\"', lock_text.splitlines()[0])
+        self.assertRegex(lock_text, r"github/gh-aw-actions/setup@[0-9a-f]{40}")
+        self.assertIn("cancel-in-progress: true", lock_text)
+        self.assertIn(r'\"report-as-issue\":\"false\"', lock_text)
+
+        actionlint = yaml.safe_load((ROOT / ".github/actionlint.yml").read_text())
+        lock_ignores = actionlint["paths"][".github/workflows/skills-reviewer.lock.yml"]["ignore"]
+        self.assertEqual(len(lock_ignores), 2)
+        self.assertTrue(any("copilot-requests" in pattern for pattern in lock_ignores))
+        self.assertTrue(any('unexpected key "queue"' in pattern for pattern in lock_ignores))
 
     def test_yaml_paths_accept_trailing_newlines_and_reject_empty_lists(self) -> None:
         (self.root / ".yamllint.yml").write_text("extends: default\nrules:\n  document-start: disable\n")
