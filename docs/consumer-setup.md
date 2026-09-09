@@ -54,10 +54,17 @@ Use [skill updates](skill-updates.md) and the [rollout skill](../.github/skills/
 
 ## Install the engineering skills reviewer
 
-Copy `.github/workflows/skills-reviewer.md`, `.github/workflows/skills-reviewer.lock.yml`, `.github/aw/actions-lock.json`, and the lock-file rule from `.gitattributes` into the consumer.
+Copy `.github/workflows/skills-reviewer.md` and `.github/workflows/skills-reviewer.lock.yml` into the consumer.
+Add the lock-file rule to the consumer's `.gitattributes` without replacing existing attributes.
+If `.github/aw/actions-lock.json` already exists, merge the `github/gh-aw-actions/setup@v0.88.2` entry and reject a conflicting value; copy the complete file only when the consumer has no action lock.
 Review the Markdown source against the consumer's instructions and adapt only the prompt or trigger policy.
 Do not edit the generated lock.
-If the consumer applies formatting or source-oriented security rules to generated YAML, add narrow path-specific exclusions for the lock while retaining gh-aw compilation and actionlint validation.
+The strict generated activation guard supports same-repository pull requests initiated by actors with write, maintain, or admin access; document a narrower caller policy and do not advertise fork review.
+
+If the consumer uses actionlint 1.7.12, merge this repository's two `.github/actionlint.yml` ignores for the skills reviewer lock.
+They suppress only the unknown `copilot-requests` permission and generated concurrency `queue` key.
+For a newer actionlint release, confirm both constructs are recognized before omitting those exceptions.
+If the consumer applies formatting or source-oriented security rules to generated YAML, add narrow path-specific exclusions for the lock while retaining gh-aw compilation, actionlint, and all checks on the maintained source.
 
 When the source changes, install the gh-aw CLI version recorded in the lock metadata and regenerate from the repository root:
 

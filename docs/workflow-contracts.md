@@ -173,13 +173,17 @@ The pinned actionlint predates `copilot-requests` and gh-aw's generated `queue` 
 The workflow runs for opened, reopened, synchronized, and ready-for-review pull requests.
 Its concurrency policy cancels an older run when the same pull request receives a newer commit.
 It verifies the live head before review output and instructs stale runs to finish without comments.
+gh-aw's strict activation guard runs this configuration only for same-repository pull requests initiated by an actor with write, maintain, or admin access.
+Fork pull requests and untrusted actors are intentionally outside this workflow's contract.
 
 The workflow grants read access to contents and pull requests plus `copilot-requests: write` for the agent engine.
-The generated safe-output jobs receive `pull-requests: write` for at most ten inline comments and one overall review, plus `issues: write` for gh-aw's incomplete-run reporting path.
+The generated safe-output jobs receive `pull-requests: write` for at most ten inline comments and one overall review.
+They also receive `issues: write` because gh-aw can report missing tools or data, incomplete runs, and agent failures as issues.
 It cannot push code, merge, approve, or change repository settings.
 
 The five Matt Pocock skills are pinned to one reviewed full commit SHA.
 The reviewer selects one or two methods for each change, checks existing comments, skips generated and lock files, and reports only verified issues on changed lines.
+Deletion-only findings go in the overall review because the generated inline-comment handler targets right-side diff lines.
 No-finding and stale-head runs use a silent `noop` rather than creating an issue or praise comment.
 
 The workflow is advisory until a real consumer run proves the installed Copilot entitlement, generated check context, current-head behavior, and review output.

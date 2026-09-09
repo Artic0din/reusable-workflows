@@ -1,6 +1,6 @@
 ---
 name: Engineering Skills Reviewer
-description: Reviews the current pull-request head with pinned engineering skills and posts only verified, changed-line findings
+description: Reviews current same-repository maintainer pull-request heads with pinned engineering skills and bounded findings
 "on":
   pull_request:
     types:
@@ -76,6 +76,7 @@ Stay concise and produce no generic praise.
 - Skip generated files, dependency lock files, and this workflow's compiled `.lock.yml` file.
 - Verify every finding against the repository source or tests.
 - Each inline comment must identify the concrete risk and the smallest sound fix.
+- Put deletion-only findings in the overall review with the file and deleted context because inline safe outputs target the right side of the diff.
 - Post at most the ten most important findings.
 - Do not treat a style preference or an unverified possibility as a finding.
 
@@ -84,6 +85,7 @@ Stay concise and produce no generic praise.
 For each verified issue, create one inline pull-request review comment.
 Prefix the visible first sentence with the skill that supports the finding, such as `**[/tdd]**`.
 Put lengthy evidence or examples in a `<details>` block.
+Keep deletion-only findings for the overall review instead of dropping them when no right-side line exists.
 
 After the inline comments, submit one overall review:
 

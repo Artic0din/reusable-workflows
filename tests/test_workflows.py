@@ -121,6 +121,9 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertRegex(lock_text, r"github/gh-aw-actions/setup@[0-9a-f]{40}")
         self.assertIn("cancel-in-progress: true", lock_text)
         self.assertIn(r'\"report-as-issue\":\"false\"', lock_text)
+        self.assertIn("github.event.pull_request.head.repo.id == github.repository_id", lock_text)
+        self.assertIn('GH_AW_REQUIRED_ROLES: "admin,maintainer,write"', lock_text)
+        self.assertIn("deletion-only findings", source_text)
 
         actionlint = yaml.safe_load((ROOT / ".github/actionlint.yml").read_text())
         lock_ignores = actionlint["paths"][".github/workflows/skills-reviewer.lock.yml"]["ignore"]
