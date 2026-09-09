@@ -109,9 +109,10 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
                 **(overrides or {}),
             }
 
-            def execute(script: str) -> subprocess.CompletedProcess[str]:
+            def execute(script: str, shell: str | None = "bash") -> subprocess.CompletedProcess[str]:
+                command = ["bash", "--noprofile", "--norc", "-eo", "pipefail"] if shell == "bash" else ["bash", "-e"]
                 return subprocess.run(
-                    ["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", script],
+                    [*command, "-c", script],
                     env=env,
                     cwd=root,
                     capture_output=True,
@@ -130,7 +131,7 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
             result = None
             env["QUEUE_OUTCOME"] = "skipped"
             if env["JOB_STATUS"] == env["METADATA_OUTCOME"] == "success":
-                result = execute(queue["run"])
+                result = execute(queue["run"], shell=queue.get("shell"))
                 env["QUEUE_OUTCOME"] = "success" if result.returncode == 0 else "failure"
                 if result.returncode:
                     env["JOB_STATUS"] = "failure"

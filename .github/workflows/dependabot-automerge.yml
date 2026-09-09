@@ -117,6 +117,7 @@ jobs:
       - name: Queue eligible update
         id: enable-automerge
         if: ${{ success() && steps.metadata.outcome == 'success' }}
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
