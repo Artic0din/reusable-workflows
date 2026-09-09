@@ -82,11 +82,22 @@ Before queueing, it checks current repository auto-merge/squash settings, strict
 Other committers fail closed, including signed human commits attributed to Dependabot.
 The complete paginated commit count must match the live PR.
 Only minor/patch updates with no maintainer changes qualify.
+Branches requiring GitHub's merge queue are unsupported and rejected during preflight before queueing.
+Preflight requires the live pull request's isMergeQueueEnabled field to be exactly false, covering effective branch protection as well as rulesets.
+This workflow manages native automatic merge requests; it does not dequeue merge-queue entries.
+Shared-workflow updates and missing metadata require manual review.
+The queue step records eligibility only after all guards and the merge request succeed.
+The first step clears an earlier automatic merge request for the matching live Dependabot head before potentially slow API and metadata checks; a new request can be enabled only after successful verification.
+Both cancellation paths recheck the live head and identity, so stale events leave newer requests intact.
+A separate cleanup step revokes an existing request unless the job, metadata and queue step all succeeded with that positive result.
+Cleanup runs after failures or cancellation and cannot enable a merge.
+With enabled set to false, verification and queueing are skipped while cancellation still runs on matching Dependabot events.
+Callers must serialize runs per pull request with cancellation disabled to prevent overlapping queue and cleanup steps.
 The merge command pins the expected head and respects GitHub protections.
 There is no checkout, execution of PR code, automatic approval, or protection bypass.
 GitHub may merge immediately if all configured requirements already pass.
 Do not enable this capability until the caller's effective rules and its intended review requirements are verified.
-Fixture tests validate the guard; an actual eligible dependency PR is needed to prove live operation.
+Fixture tests execute both queueing and cancellation; an actual eligible dependency PR is needed to prove live operation.
 
 ## Secret scan
 
