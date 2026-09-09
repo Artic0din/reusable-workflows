@@ -192,7 +192,10 @@ The reviewer selects one or two methods for each change, checks existing comment
 Buffered inline comments are submitted as a non-blocking `COMMENT` review, and the workflow does not expose a review-decision tool that could approve or request changes.
 Deletion-only findings go in the pull-request summary comment because the generated inline-comment handler targets right-side diff lines.
 No-finding runs use a silent `noop` rather than creating an issue or praise comment.
-Closed, unrelated-edit, and stale-head runs queue the same `noop` and then fail the prefetch step so the agent cannot run against invalid or mixed context.
+Closed, unrelated-edit, and stale-head runs queue the same `noop` and finish successfully without running the agent against invalid or mixed context.
+The prefetch step writes a JSONL record with top-level `type: "noop"` and `message` fields, which the pinned Copilot harness recognizes before starting the reviewer process.
+Generated setup, output processing, and threat-detection steps still run; this is not a whole-job skip.
+Prefetch API and processing errors still fail the job rather than being treated as intentional skips.
 
 The workflow is advisory until a real consumer run proves the installed Copilot entitlement, generated check context, current-head behavior, and review output.
 If its workflow check becomes required, keep required review-thread resolution enabled because a successful run can still create unresolved findings.

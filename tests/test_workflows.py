@@ -138,7 +138,10 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("BASE_CHANGED_FROM", source_text)
         self.assertIn("current_state", source_text)
         self.assertIn("Do not install packages, run tests", source_text)
-        self.assertIn("exit 1", source_text)
+        self.assertEqual(
+            agent_workflow_step("skills-reviewer.md", "Prefetch pull-request review context").strip(),
+            workflow_step("skills-reviewer.lock.yml", "Prefetch pull-request review context").strip(),
+        )
 
         lock_text = (ROOT / ".github/workflows/skills-reviewer.lock.yml").read_text()
         self.assertIn('\"compiler_version\":\"v0.88.2\"', lock_text.splitlines()[0])
@@ -164,6 +167,10 @@ class WorkflowContractTests(unittest.TestCase):
         fake_gh = fake_bin / "gh"
         fake_gh.write_text("""#!/usr/bin/env bash
 set -euo pipefail
+if [[ -n "${FAIL_GH_MATCH:-}" && "$*" == *"$FAIL_GH_MATCH"* ]]; then
+  echo "Simulated GitHub API failure" >&2
+  exit 42
+fi
 if [ "$1 $2" = "pr view" ]; then
   cat "$PR_META_FIXTURE"
   exit 0
@@ -186,13 +193,15 @@ esac
         )
 
         def execute(state: str, action: str, trigger_head: str = "head",
-                    base_changed_from: str = "") -> subprocess.CompletedProcess[str]:
+                    base_changed_from: str = "", fail_at: str = "") -> subprocess.CompletedProcess[str]:
             metadata.write_text(json.dumps({
                 "state": state,
                 "baseRefOid": "base",
                 "headRefOid": "head",
             }))
             safe_outputs = self.root / action / "outputs.jsonl"
+            safe_outputs.unlink(missing_ok=True)
+            call_log.unlink(missing_ok=True)
             return run_step(
                 script,
                 self.root,
@@ -206,27 +215,43 @@ esac
                 PR_META_FIXTURE=str(metadata),
                 PR_DIFF_FIXTURE=str(patch),
                 GH_CALL_LOG=str(call_log),
+                FAIL_GH_MATCH=fail_at,
             )
 
-        for state, action, trigger_head in (
-            ("CLOSED", "closed", "head"),
-            ("OPEN", "edited", "head"),
-            ("OPEN", "synchronize", "old-head"),
+        for state, action, trigger_head, message in (
+            ("CLOSED", "closed", "head", "Skipped pull request in CLOSED state."),
+            ("OPEN", "closed", "head", "Skipped pull request in OPEN state."),
+            ("CLOSED", "synchronize", "head", "Skipped pull request in CLOSED state."),
+            ("MERGED", "synchronize", "head", "Skipped pull request in MERGED state."),
+            ("OPEN", "edited", "head", "Skipped pull-request edit because its base branch did not change."),
+            ("OPEN", "synchronize", "old-head", "Skipped stale pull-request head old-head; current head is head."),
         ):
             with self.subTest(state=state, action=action):
-                result = execute(state, action, trigger_head)
-                self.assertNotEqual(result.returncode, 0, result.stderr)
                 safe_outputs = self.root / action / "outputs.jsonl"
-                self.assertEqual(json.loads(safe_outputs.read_text())["noop"].keys(), {"message"})
+                result = execute(state, action, trigger_head)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(safe_outputs.read_text()), {"type": "noop", "message": message})
+                self.assertFalse(call_log.exists(), "Skipped runs must not fetch review context")
 
-        result = execute("OPEN", "edited", base_changed_from="main")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        context = Path("/tmp/gh-aw/agent")
-        diff = (context / "pr-diff.patch").read_text()
-        self.assertNotIn("package-lock.json", diff)
-        self.assertIn("src/app.py", diff)
-        self.assertTrue((context / "pr-issue-comments.json").is_file())
-        self.assertIn("issues/7/comments", call_log.read_text())
+        for action in ("opened", "reopened", "synchronize", "ready_for_review", "edited"):
+            with self.subTest(action=action):
+                result = execute("OPEN", action, base_changed_from="main" if action == "edited" else "")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertFalse((self.root / action / "outputs.jsonl").exists())
+                context = Path("/tmp/gh-aw/agent")
+                diff = (context / "pr-diff.patch").read_text()
+                self.assertNotIn("package-lock.json", diff)
+                self.assertIn("src/app.py", diff)
+                self.assertTrue((context / "pr-issue-comments.json").is_file())
+                self.assertIn("compare/base...head", call_log.read_text())
+                self.assertIn("issues/7/comments", call_log.read_text())
+
+        for endpoint in ("pr view", "compare/", "pulls/7/comments", "issues/7/comments", "pulls/7/reviews"):
+            with self.subTest(endpoint=endpoint):
+                result = execute("OPEN", "synchronize", fail_at=endpoint)
+                self.assertEqual(result.returncode, 42, result.stderr)
+                self.assertIn("Simulated GitHub API failure", result.stderr)
+                self.assertFalse((self.root / "synchronize/outputs.jsonl").exists())
 
     def test_yaml_paths_accept_trailing_newlines_and_reject_empty_lists(self) -> None:
         (self.root / ".yamllint.yml").write_text("extends: default\nrules:\n  document-start: disable\n")
