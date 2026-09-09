@@ -13,6 +13,7 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Fixed
 
+- Rechecked dependency pull-request targets after metadata verification before enabling automatic merges.
 - Serialized dependency auto-merge attempts within the shared workflow and retained pending validations when delayed events arrive.
 - Cleared earlier automatic merge requests before verifying dependency updates.
 - Preserved current automatic merge requests when older events were rerun.

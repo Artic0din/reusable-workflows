@@ -121,6 +121,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
           DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
           UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
           MAINTAINER_CHANGES: ${{ steps.metadata.outputs.maintainer-changes }}
@@ -135,6 +138,14 @@ jobs:
             version-update:semver-patch|version-update:semver-minor) ;;
             *) exit 0 ;;
           esac
+          default_branch="$(gh api "repos/$REPOSITORY" --jq '.default_branch')"
+          test "$default_branch" = "$BASE_BRANCH"
+          gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" |
+            jq --exit-status --arg repo "$REPOSITORY" --arg base "$BASE_BRANCH" --arg head "$PR_HEAD_SHA" '
+              .state == "open" and .draft == false and .user.login == "dependabot[bot]" and
+              .head.sha == $head and .head.repo.full_name == $repo and
+              .base.ref == $base and .base.repo.full_name == $repo
+            '
           gh pr merge --auto --squash --match-head-commit "$PR_HEAD_SHA" "$PR_URL"
           echo "eligible=true" >> "$GITHUB_OUTPUT"
       - name: Cancel automatic merges requiring manual review

@@ -94,6 +94,9 @@ A separate cleanup step revokes an existing request unless the job, metadata and
 Cleanup runs after failures or cancellation and cannot enable a merge.
 With enabled set to false, verification and queueing are skipped while cancellation still runs on matching Dependabot events.
 The merge command pins the expected head and respects GitHub protections.
+After metadata succeeds, the queue step rechecks the live default branch, PR target repository/ref, author, open/non-draft state and head immediately before requesting automatic merge.
+Changed identity, retargeting or failed API reads prevent a new request and run cleanup for any matching earlier request.
+GitHub does not provide an atomic expected-base condition for this command; a base change after the final read can still race the request.
 The cleanup reads current state independently of the guard's temporary files, avoids writes when auto-merge is already disabled or the PR is closed, and reports API failures instead of suppressing them.
 The job serializes all attempts for each repository/PR with a library-owned `reusable-dependabot-automerge-` concurrency group and does not cancel an active attempt.
 It uses `queue: max` so delayed older events cannot replace a waiting current-head validation.

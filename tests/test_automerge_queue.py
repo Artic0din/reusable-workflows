@@ -56,7 +56,16 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
                 "    key = 'GH_CANCEL_EXIT' if '--disable-auto' in args else 'GH_MERGE_EXIT'\n"
                 "    sys.exit(int(os.environ[key]))\n"
                 "if args[0] == 'api':\n"
-                "    if any('/commits' in arg for arg in args):\n"
+                "    if args[1] == 'repos/example/repository':\n"
+                "        print(os.environ.get('GH_DEFAULT_BRANCH', 'main'))\n"
+                "    elif args[1] == 'repos/example/repository/pulls/1':\n"
+                "        print(json.dumps({'state': 'open', 'draft': False,\n"
+                "            'user': {'login': 'dependabot[bot]'},\n"
+                "            'head': {'sha': os.environ['PR_HEAD_SHA'], 'repo': {'full_name': 'example/repository'}},\n"
+                "            'base': {'ref': os.environ.get('GH_BASE_REF', 'main'),\n"
+                "                     'repo': {'full_name': os.environ.get('GH_BASE_REPO', 'example/repository')}}}))\n"
+                "        sys.exit(int(os.environ.get('GH_QUEUE_PR_EXIT', '0')))\n"
+                "    elif any('/commits' in arg for arg in args):\n"
                 "        commit = {'sha': os.environ['PR_HEAD_SHA'],\n"
                 "                  'author': {'login': 'dependabot[bot]'},\n"
                 "                  'commit': {'verification': {'verified': True}}}\n"
@@ -95,6 +104,8 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
                 "PR_HEAD_SHA": HEAD_SHA,
                 "PR_HEAD": HEAD_SHA,
                 "PR_NUMBER": "1",
+                "REPOSITORY": "example/repository",
+                "BASE_BRANCH": "main",
                 **(overrides or {}),
             }
 
@@ -147,6 +158,21 @@ class SharedWorkflowAutomergeTests(unittest.TestCase):
                 self.assertIn("--squash", merges[0])
                 self.assertEqual(merges[0][merges[0].index("--match-head-commit") + 1], HEAD_SHA)
                 self.assertFalse(any(call[:2] == ["pr", "view"] for call in calls), calls)
+
+    def test_retargeted_base_cannot_queue_after_metadata_succeeds(self) -> None:
+        for change in (
+            {"GH_BASE_REF": "release"},
+            {"GH_BASE_REPO": "different/repository"},
+            {"GH_DEFAULT_BRANCH": "trunk"},
+            {"GH_QUEUE_PR_EXIT": "7"},
+        ):
+            with self.subTest(change=change):
+                queue, cleanup, calls = self.run_policy(change)
+                self.assertIsNotNone(queue)
+                self.assertNotEqual(queue.returncode, 0)
+                self.assertEqual(cleanup.returncode, 0, cleanup.stderr)
+                self.assertFalse(any("--auto" in call for call in calls), calls)
+                self.assertIn(["pr", "merge", "--disable-auto", PR_URL], calls)
 
     def test_ineligible_updates_cannot_queue_or_retain_an_existing_queue(self) -> None:
         cases = [

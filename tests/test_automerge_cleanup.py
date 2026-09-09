@@ -25,6 +25,11 @@ class AutoMergeCleanupTests(unittest.TestCase):
         self.state.write_text(json.dumps(self.open_pull))
         executable = root / 'gh'
         executable.write_text('#!/bin/sh\nset -eu\ncase "$*" in\n'
+                              '"api repos/fixture/repo --jq .default_branch") printf "%s\\n" main ;;\n'
+                              '"api repos/fixture/repo/pulls/1")\n'
+                              '  jq --arg repo "$REPOSITORY" \'{state: (.state | ascii_downcase), draft: false,\n'
+                              '    user: {login: "dependabot[bot]"}, head: {sha: .headRefOid, repo: {full_name: $repo}},\n'
+                              '    base: {ref: "main", repo: {full_name: $repo}}}\' "$STATE_FILE" ;;\n'
                               'pr\\ view*)\n'
                               '  test "${READ_FAILURE:-false}" = false || exit 31\n'
                               '  cat "$STATE_FILE" ;;\n'
@@ -40,7 +45,7 @@ class AutoMergeCleanupTests(unittest.TestCase):
         executable.chmod(0o700)
         self.environment = dict(os.environ, PATH=f'{root}{os.pathsep}{os.environ["PATH"]}',
                                 STATE_FILE=str(self.state), RUNNER_TEMP=str(root),
-                                REPOSITORY='fixture/repo', PR_NUMBER='1', PR_HEAD_SHA='a' * 40,
+                                REPOSITORY='fixture/repo', PR_NUMBER='1', PR_HEAD_SHA='a' * 40, BASE_BRANCH='main',
                                 PR_URL='https://github.com/fixture/repo/pull/1', GITHUB_OUTPUT=str(self.output),
                                 DEPENDENCY_NAMES='actions/checkout', UPDATE_TYPE='version-update:semver-patch',
                                 MAINTAINER_CHANGES='false')
