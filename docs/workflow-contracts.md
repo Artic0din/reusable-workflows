@@ -177,7 +177,7 @@ gh-aw's strict activation guard runs this configuration only for same-repository
 Fork pull requests and untrusted actors are intentionally outside this workflow's contract.
 
 The workflow grants read access to contents and pull requests plus `copilot-requests: write` for the agent engine.
-The generated safe-output jobs receive `pull-requests: write` for at most ten inline comments and one overall review.
+The generated safe-output jobs receive `pull-requests: write` for at most ten inline comments and one pull-request summary comment.
 They also receive `issues: write` because gh-aw can report missing tools or data and incomplete runs as issues.
 Provider and agent failures remain visible in the workflow run but do not create repository issues.
 It cannot push code, merge, approve, or change repository settings.
@@ -188,8 +188,10 @@ The agent reads that local context and uses the GitHub pull-request tool only fo
 
 The five Matt Pocock skills are pinned to one reviewed full commit SHA.
 The reviewer selects one or two methods for each change, checks existing comments, skips generated and lock files, and reports only verified issues on changed lines.
-Deletion-only findings go in the overall review because the generated inline-comment handler targets right-side diff lines.
-No-finding and stale-head runs use a silent `noop` rather than creating an issue or praise comment.
+Buffered inline comments are submitted as a non-blocking `COMMENT` review, and the workflow does not expose a review-decision tool that could approve or request changes.
+Deletion-only findings go in the pull-request summary comment because the generated inline-comment handler targets right-side diff lines.
+No-finding runs use a silent `noop` rather than creating an issue or praise comment.
+Stale-head runs queue the same `noop` and then fail the prefetch step so the agent cannot run against mixed context.
 
 The workflow is advisory until a real consumer run proves the installed Copilot entitlement, generated check context, current-head behavior, and review output.
 If its workflow check becomes required, keep required review-thread resolution enabled because a successful run can still create unresolved findings.

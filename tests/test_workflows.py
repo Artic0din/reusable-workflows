@@ -113,6 +113,8 @@ class WorkflowContractTests(unittest.TestCase):
             "copilot-requests": "write",
         })
         self.assertEqual(frontmatter["safe-outputs"]["create-pull-request-review-comment"]["max"], 10)
+        self.assertEqual(frontmatter["safe-outputs"]["add-comment"]["max"], 1)
+        self.assertNotIn("submit-pull-request-review", frontmatter["safe-outputs"])
         self.assertFalse(frontmatter["safe-outputs"]["noop"]["report-as-issue"])
         self.assertFalse(frontmatter["safe-outputs"]["report-failure-as-issue"])
         self.assertTrue(all(re.search(r"@[0-9a-f]{40}$", skill) for skill in frontmatter["skills"]))
@@ -122,6 +124,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn(r"\.github\/workflows\/.*\.lock\.yml", source_text)
         self.assertIn(r"\.github\/aw\/actions-lock\.json", source_text)
         self.assertIn("Do not install packages, run tests", source_text)
+        self.assertIn("exit 1", source_text)
 
         lock_text = (ROOT / ".github/workflows/skills-reviewer.lock.yml").read_text()
         self.assertIn('\"compiler_version\":\"v0.88.2\"', lock_text.splitlines()[0])
@@ -132,6 +135,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("github.event.pull_request.head.repo.id == github.repository_id", lock_text)
         self.assertIn('GH_AW_REQUIRED_ROLES: "admin,maintainer,write"', lock_text)
         self.assertIn("deletion-only findings", source_text)
+        self.assertNotIn("submit_pull_request_review", lock_text)
 
         actionlint = yaml.safe_load((ROOT / ".github/actionlint.yml").read_text())
         lock_ignores = actionlint["paths"][".github/workflows/skills-reviewer.lock.yml"]["ignore"]

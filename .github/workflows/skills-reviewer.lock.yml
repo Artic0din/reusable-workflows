@@ -1,5 +1,5 @@
-# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"5c3e1e1198da8d6f665396542fa95ef24208c6bd90a22f43d1f23d89943ac83e","body_hash":"bb5db0da088a8bf8bc61f2e220f634c61ac1067f65344f93b0f4f652a85e99ca","compiler_version":"v0.88.2","strict":true,"agent_id":"copilot","engine_versions":{"copilot":"1.0.80"}}
-# gh-aw-manifest: {"version":1,"secrets":["GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN"],"actions":[{"repo":"actions/cache/restore","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/cache/save","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"9271a1804551c0dc4fb0085a97979950aa2f8489","version":"v0.88.2"}],"skills":["mattpocock/skills/codebase-design@801dca688564c529fa84f247f64472520d9ebe28","mattpocock/skills/diagnosing-bugs@801dca688564c529fa84f247f64472520d9ebe28","mattpocock/skills/grill-with-docs@801dca688564c529fa84f247f64472520d9ebe28","mattpocock/skills/improve-codebase-architecture@801dca688564c529fa84f247f64472520d9ebe28","mattpocock/skills/tdd@801dca688564c529fa84f247f64472520d9ebe28"],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12","digest":"sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12@sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12","digest":"sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12@sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12","digest":"sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12@sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.4.15","digest":"sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.4.15@sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e","pinned_image":"ghcr.io/github/gh-aw-node@sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e"},{"image":"ghcr.io/github/github-mcp-server:v1.11.0","digest":"sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699","pinned_image":"ghcr.io/github/github-mcp-server:v1.11.0@sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699"}],"has_pull_request":true,"mcp_servers":[{"name":"github","tools":["get_pull_request","get_pull_request_comments","get_pull_request_diff","get_pull_request_files","get_pull_request_review_comments","get_pull_request_reviews","get_pull_request_status","list_pull_requests","pull_request_read","search_pull_requests"]},{"name":"safeoutputs","tools":["create_pull_request_review_comment","missing_data","missing_tool","noop","submit_pull_request_review"]}]}
+# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"975b520b7ba22d543fd905959d6553920e92d2711f85b78669a4ee1492c23b3f","body_hash":"a10495f7169f9609d24357e6ab96f2634dd22f1211f7516eae46b37a3bfe2aab","compiler_version":"v0.88.2","strict":true,"agent_id":"copilot","engine_versions":{"copilot":"1.0.80"}}
+# gh-aw-manifest: {"version":1,"secrets":["GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN"],"actions":[{"repo":"actions/cache/restore","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/cache/save","sha":"55cc8345863c7cc4c66a329aec7e433d2d1c52a9","version":"v6.1.0"},{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"9271a1804551c0dc4fb0085a97979950aa2f8489","version":"v0.88.2"}],"skills":["mattpocock/skills/codebase-design@801dca688564c529fa84f247f64472520d9ebe28","mattpocock/skills/diagnosing-bugs@801dca688564c529fa84f247f64472520d9ebe28","mattpocock/skills/grill-with-docs@801dca688564c529fa84f247f64472520d9ebe28","mattpocock/skills/improve-codebase-architecture@801dca688564c529fa84f247f64472520d9ebe28","mattpocock/skills/tdd@801dca688564c529fa84f247f64472520d9ebe28"],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12","digest":"sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.28.12@sha256:390051be4ed1847f774fd8980b61d3a3523574c0175d00c3fc7cdf2002a88202"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12","digest":"sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.28.12@sha256:d7d533d87c80d87ff91ac0e21e9299055c3beedff1536262b97ed700fb065a32"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12","digest":"sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.28.12@sha256:52c34aca98d2a6833c329f1505912a6949c4fda16618c010c979bd59ea99254f"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.4.15","digest":"sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.4.15@sha256:60cd97533e93d8e7be36b979c0f08a70846189bda6190f28bbd6d427bc0d9b6e"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e","pinned_image":"ghcr.io/github/gh-aw-node@sha256:bac2192f6374d6262116399b34fc5e143d576f82719e90a18261cae7480f4d4e"},{"image":"ghcr.io/github/github-mcp-server:v1.11.0","digest":"sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699","pinned_image":"ghcr.io/github/github-mcp-server:v1.11.0@sha256:fbec75de11c255213fa08d80fb166abe73d851fff631c51c0079872967720699"}],"has_pull_request":true,"mcp_servers":[{"name":"github","tools":["get_pull_request","get_pull_request_comments","get_pull_request_diff","get_pull_request_files","get_pull_request_review_comments","get_pull_request_reviews","get_pull_request_status","list_pull_requests","pull_request_read","search_pull_requests"]},{"name":"safeoutputs","tools":["add_comment","create_pull_request_review_comment","missing_data","missing_tool","noop"]}]}
 # This file was automatically generated by gh-aw (v0.88.2). DO NOT EDIT. To debug this workflow, load the skill at https://github.com/github/gh-aw/blob/main/debug.md
 #
 #    ___                   _   _
@@ -383,7 +383,7 @@ jobs:
           GH_AW_GITHUB_RUN_ID: ${{ github.run_id }}
           GH_AW_GITHUB_WORKSPACE: ${{ github.workspace }}
           GH_AW_PROMPT_CONTENT_0000: "<system>\n"
-          GH_AW_PROMPT_CONTENT_0001: "<safe-output-tools>\nTools: create_pull_request_review_comment(max:10), submit_pull_request_review, missing_tool, missing_data, noop\n"
+          GH_AW_PROMPT_CONTENT_0001: "<safe-output-tools>\nTools: add_comment, create_pull_request_review_comment(max:10), missing_tool, missing_data, noop\n"
           GH_AW_PROMPT_CONTENT_0002: "</safe-output-tools>\n"
           GH_AW_PROMPT_CONTENT_0003: "<github-context>\nThe following GitHub context information is available for this workflow:\n{{#if github.actor}}\n- **actor**: __GH_AW_GITHUB_ACTOR__\n{{/if}}\n{{#if github.repository}}\n- **repository**: __GH_AW_GITHUB_REPOSITORY__\n{{/if}}\n{{#if github.workspace}}\n- **workspace**: __GH_AW_GITHUB_WORKSPACE__\n{{/if}}\n{{#if github.event.issue.number || (github.aw.context.item_type == 'issue' && github.aw.context.item_number)}}\n- **issue-number**: #__GH_AW_EXPR_802A9F6A__\n{{/if}}\n{{#if github.event.discussion.number || (github.aw.context.item_type == 'discussion' && github.aw.context.item_number)}}\n- **discussion-number**: #__GH_AW_EXPR_1A3A194A__\n{{/if}}\n{{#if github.event.pull_request.number || (github.aw.context.item_type == 'pull_request' && github.aw.context.item_number)}}\n- **pull-request-number**: #__GH_AW_EXPR_463A214A__\n{{/if}}\n{{#if github.event.comment.id || github.aw.context.comment_id}}\n- **comment-id**: __GH_AW_EXPR_FF1D34CE__\n{{/if}}\n{{#if github.run_id}}\n- **workflow-run-id**: __GH_AW_GITHUB_RUN_ID__\n{{/if}}\n</github-context>\n\n"
           GH_AW_PROMPT_CONTENT_0004: "</system>\n"
@@ -586,7 +586,7 @@ jobs:
           PR_REPOSITORY: ${{ github.repository }}
           TRIGGER_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         name: Prefetch pull-request review context
-        run: "set -euo pipefail\ncontext_dir=/tmp/gh-aw/agent\nmkdir -p \"$context_dir\"\n\ngh pr view \"$PR_NUMBER\" \\\n  --repo \"$PR_REPOSITORY\" \\\n  --json number,title,body,baseRefOid,headRefName,headRefOid,additions,deletions,changedFiles,files \\\n  > \"$context_dir/pr-meta.json\"\n\ncurrent_head_sha=$(jq -r '.headRefOid' \"$context_dir/pr-meta.json\")\nif [ \"$current_head_sha\" != \"$TRIGGER_HEAD_SHA\" ]; then\n  jq -cn \\\n    --arg message \"Skipped stale pull-request head $TRIGGER_HEAD_SHA; current head is $current_head_sha.\" \\\n    '{noop: {message: $message}}' >> \"$GH_AW_SAFE_OUTPUTS\"\n  exit 0\nfi\n\ncurrent_base_sha=$(jq -r '.baseRefOid' \"$context_dir/pr-meta.json\")\ngh api \\\n  -H \"Accept: application/vnd.github.v3.diff\" \\\n  \"repos/$PR_REPOSITORY/compare/$current_base_sha...$current_head_sha\" \\\n  | awk '\n      /^diff --git / {\n        skip = ($0 ~ / b\\/\\.github\\/workflows\\/.*\\.lock\\.yml$/ ||\n                $0 ~ / b\\/\\.github\\/aw\\/actions-lock\\.json$/ ||\n                $0 ~ / b\\/(package-lock\\.json|pnpm-lock\\.yaml|yarn\\.lock|uv\\.lock|poetry\\.lock|Cargo\\.lock|Podfile\\.lock|Gemfile\\.lock|composer\\.lock|Package\\.resolved)$/)\n      }\n      !skip { print }\n    ' \\\n  | sed -n '1,3000p' > \"$context_dir/pr-diff.patch\"\n\ngh api \\\n  --paginate \\\n  \"repos/$PR_REPOSITORY/pulls/$PR_NUMBER/comments?per_page=100\" \\\n  --jq '.[] | {id, path, line: (.line // .original_line), body: .body[:500], user: .user.login}' \\\n  | jq -s '.' > \"$context_dir/pr-review-comments.json\"\n\ngh api \\\n  --paginate \\\n  \"repos/$PR_REPOSITORY/pulls/$PR_NUMBER/reviews?per_page=100\" \\\n  --jq '.[] | {id, state, body: .body[:500], commit_id, user: .user.login}' \\\n  | jq -s '.' > \"$context_dir/pr-reviews.json\""
+        run: "set -euo pipefail\ncontext_dir=/tmp/gh-aw/agent\nmkdir -p \"$context_dir\"\n\ngh pr view \"$PR_NUMBER\" \\\n  --repo \"$PR_REPOSITORY\" \\\n  --json number,title,body,baseRefOid,headRefName,headRefOid,additions,deletions,changedFiles,files \\\n  > \"$context_dir/pr-meta.json\"\n\ncurrent_head_sha=$(jq -r '.headRefOid' \"$context_dir/pr-meta.json\")\nif [ \"$current_head_sha\" != \"$TRIGGER_HEAD_SHA\" ]; then\n  jq -cn \\\n    --arg message \"Skipped stale pull-request head $TRIGGER_HEAD_SHA; current head is $current_head_sha.\" \\\n    '{noop: {message: $message}}' >> \"$GH_AW_SAFE_OUTPUTS\"\n  exit 1\nfi\n\ncurrent_base_sha=$(jq -r '.baseRefOid' \"$context_dir/pr-meta.json\")\ngh api \\\n  -H \"Accept: application/vnd.github.v3.diff\" \\\n  \"repos/$PR_REPOSITORY/compare/$current_base_sha...$current_head_sha\" \\\n  | awk '\n      /^diff --git / {\n        skip = ($0 ~ / b\\/\\.github\\/workflows\\/.*\\.lock\\.yml$/ ||\n                $0 ~ / b\\/\\.github\\/aw\\/actions-lock\\.json$/ ||\n                $0 ~ / b\\/(package-lock\\.json|pnpm-lock\\.yaml|yarn\\.lock|uv\\.lock|poetry\\.lock|Cargo\\.lock|Podfile\\.lock|Gemfile\\.lock|composer\\.lock|Package\\.resolved)$/)\n      }\n      !skip { print }\n    ' \\\n  | sed -n '1,3000p' > \"$context_dir/pr-diff.patch\"\n\ngh api \\\n  --paginate \\\n  \"repos/$PR_REPOSITORY/pulls/$PR_NUMBER/comments?per_page=100\" \\\n  --jq '.[] | {id, path, line: (.line // .original_line), body: .body[:500], user: .user.login}' \\\n  | jq -s '.' > \"$context_dir/pr-review-comments.json\"\n\ngh api \\\n  --paginate \\\n  \"repos/$PR_REPOSITORY/pulls/$PR_NUMBER/reviews?per_page=100\" \\\n  --jq '.[] | {id, state, body: .body[:500], commit_id, user: .user.login}' \\\n  | jq -s '.' > \"$context_dir/pr-reviews.json\""
 
       - name: Configure Git credentials
         env:
@@ -656,7 +656,7 @@ jobs:
         env:
           GH_AW_FILE_ROOT: "${{ runner.temp }}/gh-aw"
           GH_AW_FILE_CONFIG: "{\"files\":[{\"path\":\"safeoutputs/config.json\",\"content_env\":\"GH_AW_SAFE_OUTPUTS_CONFIG\"}]}"
-          GH_AW_SAFE_OUTPUTS_CONFIG: "{\"create_pull_request_review_comment\":{\"max\":10,\"side\":\"RIGHT\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"report_incomplete\":{},\"submit_pull_request_review\":{\"max\":1}}"
+          GH_AW_SAFE_OUTPUTS_CONFIG: "{\"add_comment\":{\"max\":1},\"create_pull_request_review_comment\":{\"max\":10,\"side\":\"RIGHT\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"report_incomplete\":{}}"
         with:
           script: |
             const path = require('path');
@@ -670,14 +670,55 @@ jobs:
           GH_AW_TOOLS_META_JSON: |
             {
               "description_suffixes": {
-                "create_pull_request_review_comment": " CONSTRAINTS: Maximum 10 review comment(s) can be created. Comments will be on the RIGHT side of the diff.",
-                "submit_pull_request_review": " CONSTRAINTS: Maximum 1 review(s) can be submitted."
+                "add_comment": " CONSTRAINTS: Maximum 1 comment(s) can be added. Supports reply_to_id for discussion threading.",
+                "create_pull_request_review_comment": " CONSTRAINTS: Maximum 10 review comment(s) can be created. Comments will be on the RIGHT side of the diff."
               },
               "repo_params": {},
               "dynamic_tools": []
             }
           GH_AW_VALIDATION_JSON: |
             {
+              "add_comment": {
+                "defaultMax": 1,
+                "fields": {
+                  "body": {
+                    "required": true,
+                    "type": "string",
+                    "sanitize": true,
+                    "maxLength": 65000
+                  },
+                  "comment_id": {
+                    "optionalPositiveInteger": true
+                  },
+                  "item_number": {
+                    "issueOrPRNumber": true
+                  },
+                  "pr": {
+                    "issueOrPRNumber": true
+                  },
+                  "pr_number": {
+                    "issueOrPRNumber": true
+                  },
+                  "reply_to_id": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "repo": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "target": {
+                    "type": "string",
+                    "enum": [
+                      "status"
+                    ]
+                  },
+                  "temporary_id": {
+                    "type": "string",
+                    "pattern": "^#?aw_[A-Za-z0-9_]{3,12}$"
+                  }
+                }
+              },
               "create_pull_request_review_comment": {
                 "defaultMax": 1,
                 "fields": {
@@ -785,31 +826,6 @@ jobs:
                     "type": "string",
                     "sanitize": true,
                     "maxLength": 1024
-                  }
-                }
-              },
-              "submit_pull_request_review": {
-                "defaultMax": 1,
-                "fields": {
-                  "body": {
-                    "type": "string",
-                    "sanitize": true,
-                    "maxLength": 65000
-                  },
-                  "event": {
-                    "type": "string",
-                    "enum": [
-                      "APPROVE",
-                      "REQUEST_CHANGES",
-                      "COMMENT"
-                    ]
-                  },
-                  "pull_request_number": {
-                    "issueOrPRNumber": true
-                  },
-                  "repo": {
-                    "type": "string",
-                    "maxLength": 256
                   }
                 }
               }
@@ -1844,6 +1860,8 @@ jobs:
     outputs:
       code_push_failure_count: ${{ steps.process_safe_outputs.outputs.code_push_failure_count }}
       code_push_failure_errors: ${{ steps.process_safe_outputs.outputs.code_push_failure_errors }}
+      comment_id: ${{ steps.process_safe_outputs.outputs.comment_id }}
+      comment_url: ${{ steps.process_safe_outputs.outputs.comment_url }}
       create_discussion_error_count: ${{ steps.process_safe_outputs.outputs.create_discussion_error_count }}
       create_discussion_errors: ${{ steps.process_safe_outputs.outputs.create_discussion_errors }}
       process_safe_outputs_items_applied: ${{ steps.process_safe_outputs.outputs.items_applied }}
@@ -1908,7 +1926,7 @@ jobs:
           GH_AW_ALLOWED_DOMAINS: "api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,ppa.launchpad.net,s.symcb.com,s.symcd.com,security.ubuntu.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.googleapis.com"
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_API_URL: ${{ github.api_url }}
-          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"create_pull_request_review_comment\":{\"max\":10,\"side\":\"RIGHT\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"report_incomplete\":{},\"submit_pull_request_review\":{\"max\":1}}"
+          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"add_comment\":{\"max\":1},\"create_pull_request_review_comment\":{\"max\":10,\"side\":\"RIGHT\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"false\"},\"report_incomplete\":{}}"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |

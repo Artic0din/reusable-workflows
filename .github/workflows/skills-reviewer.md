@@ -52,7 +52,7 @@ steps:
         jq -cn \
           --arg message "Skipped stale pull-request head $TRIGGER_HEAD_SHA; current head is $current_head_sha." \
           '{noop: {message: $message}}' >> "$GH_AW_SAFE_OUTPUTS"
-        exit 0
+        exit 1
       fi
 
       current_base_sha=$(jq -r '.baseRefOid' "$context_dir/pr-meta.json")
@@ -83,7 +83,7 @@ steps:
 safe-outputs:
   create-pull-request-review-comment:
     max: 10
-  submit-pull-request-review:
+  add-comment:
     max: 1
   noop:
     report-as-issue: false
@@ -131,7 +131,7 @@ Stay concise and produce no generic praise.
 - Skip generated files, dependency lock files, and this workflow's compiled `.lock.yml` file.
 - Verify every finding against the repository source or tests.
 - Each inline comment must identify the concrete risk and the smallest sound fix.
-- Put deletion-only findings in the overall review with the file and deleted context because inline safe outputs target the right side of the diff.
+- Put deletion-only findings in the pull-request summary comment with the file and deleted context because inline safe outputs target the right side of the diff.
 - Post at most the ten most important findings.
 - Do not treat a style preference or an unverified possibility as a finding.
 
@@ -140,12 +140,8 @@ Stay concise and produce no generic praise.
 For each verified issue, create one inline pull-request review comment.
 Prefix the visible first sentence with the skill that supports the finding, such as `**[/tdd]**`.
 Put lengthy evidence or examples in a `<details>` block.
-Keep deletion-only findings for the overall review instead of dropping them when no right-side line exists.
+The workflow submits buffered inline comments as a `COMMENT` review automatically.
+When findings exist, call `add_comment` once with a concise severity summary and any deletion-only findings.
+When no actionable issue remains, call `noop` with a concise current-head completion message instead of posting praise.
 
-After the inline comments, submit one overall review:
-
-- `REQUEST_CHANGES` when a verified issue can break behavior, security, data integrity, or a required contract.
-- `COMMENT` when findings are useful but non-blocking.
-- When no actionable issue remains, call `noop` with a concise current-head completion message instead of posting praise.
-
-Do not merge, push changes, approve your own work, or modify repository content.
+Do not merge, push changes, request changes, approve, or modify repository content.
