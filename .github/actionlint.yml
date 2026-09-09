@@ -1,0 +1,5 @@
+paths:
+  .github/workflows/dependabot-automerge.yml:
+    ignore:
+      # Temporary: actionlint 1.7.12 predates GitHub's queue property; regression tests validate its value.
+      - '^unexpected key "queue" for "concurrency" section\. expected one of "cancel-in-progress", "group"$'
