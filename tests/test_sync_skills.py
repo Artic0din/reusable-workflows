@@ -25,6 +25,8 @@ class SyncSkillsTests(unittest.TestCase):
             self.git(repository, 'init', '-q')
             self.git(repository, 'config', 'user.name', 'Test')
             self.git(repository, 'config', 'user.email', 'test@example.invalid')
+            self.git(repository, 'config', 'gc.auto', '0')
+            self.git(repository, 'config', 'maintenance.auto', 'false')
         self.base_text = 'Shared first line\n\nStable section\n\nRepository guidance\n'
         self.write(self.library, self.path, self.base_text)
         self.base = self.commit(self.library)
@@ -36,7 +38,11 @@ class SyncSkillsTests(unittest.TestCase):
 
     @staticmethod
     def git(repository, *args):
-        return subprocess.check_output(['git', '-C', str(repository), *args], text=True).strip()
+        repository = Path(repository)
+        command = ['git', '-C', str(repository), *args]
+        if not (repository / '.git').exists() and (repository / 'HEAD').exists() and (repository / 'config').exists():
+            command = ['git', f'--git-dir={repository}', *args]
+        return subprocess.check_output(command, text=True).strip()
 
     @staticmethod
     def write(repository, path, content):

@@ -28,6 +28,7 @@ CodeQL eligibility and dependency auto-merge activation remain caller-owned.
 | Verified, opt-in Dependabot auto-merge | [.github/workflows/dependabot-automerge.yml](.github/workflows/dependabot-automerge.yml) |
 | Redacted history secret scanning | [.github/workflows/secret-scan.yml](.github/workflows/secret-scan.yml) |
 | Current-commit Codex code-review completion | [.github/workflows/codex-review-gate.yml](.github/workflows/codex-review-gate.yml) |
+| Repository-local engineering skills review | [.github/workflows/skills-reviewer.md](.github/workflows/skills-reviewer.md) and its generated [lock](.github/workflows/skills-reviewer.lock.yml) |
 
 [validate-self.yml](.github/workflows/validate-self.yml) contains executable caller examples, including Python/npm and generated-output fixtures.
 [Consumer setup](docs/consumer-setup.md) covers external wiring, Copilot, Dependabot, updates, and rollback.
@@ -46,6 +47,7 @@ For agents that do not discover .github/skills, add explicit links in the caller
 Do not copy this repository's entire agent policy over a project's instructions.
 The [rollout skill](.github/skills/rollout-repositories/SKILL.md) onboards selected repositories and prepares future update PRs.
 The [skill-update helper](docs/skill-updates.md) preserves consumer adaptations with three-way merges and refuses conflicts before writing.
+The engineering skills reviewer is an event-driven agentic workflow, so consumers copy its source and generated lock together instead of calling it with `workflow_call`.
 
 ## Development
 
@@ -77,3 +79,4 @@ Record changes in [CHANGELOG.md](CHANGELOG.md).
 [MIT](LICENSE).
 Workflow patterns were adapted from Chris Reddington's [validate-file-exists](https://github.com/chrisreddington/validate-file-exists) and [reusable-workflows](https://github.com/chrisreddington/reusable-workflows) repositories.
 His copyright notice is retained for adapted portions.
+The engineering skills reviewer was rebuilt from GitHub's MIT-licensed [Matt Pocock skills reviewer](https://github.com/github/gh-aw/blob/main/.github/workflows/mattpocock-skills-reviewer.md) and uses MIT-licensed skills from [mattpocock/skills](https://github.com/mattpocock/skills).

@@ -1,7 +1,8 @@
 """Run the actual workflow shell steps against isolated consumer repositories."""
-import os
 import json
+import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -18,10 +19,18 @@ def workflow_step(filename: str, name: str) -> str:
                 for step in job.get("steps", []) if step.get("name") == name)
 
 
+def agent_workflow_step(filename: str, name: str) -> str:
+    source_text = (ROOT / ".github/workflows" / filename).read_text()
+    frontmatter = yaml.safe_load(source_text.split("---", 2)[1])
+    return next(step["run"] for step in frontmatter["steps"] if step.get("name") == name)
+
+
 def run_step(script: str, directory: Path, **values: str) -> subprocess.CompletedProcess[str]:
+    environment = dict(os.environ)
+    environment["PATH"] = f'{Path(sys.executable).parent}{os.pathsep}{os.environ["PATH"]}'
+    environment.update(values)
     return subprocess.run(["bash", "-euo", "pipefail", "-c", script], cwd=directory,
-                          env=dict(os.environ, PATH=f'{Path(sys.executable).parent}{os.pathsep}{os.environ["PATH"]}',
-                                   **values), capture_output=True, text=True,
+                          env=environment, capture_output=True, text=True,
                           timeout=15, check=False)
 
 
@@ -98,6 +107,133 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertEqual(checkout["with"]["repository"], "Artic0din/reusable-workflows")
         self.assertRegex(checkout["with"]["ref"], r"^[0-9a-f]{40}$")
         self.assertFalse(checkout["with"]["persist-credentials"])
+
+    def test_skills_reviewer_is_current_head_bounded_and_pinned(self) -> None:
+        source_text = (ROOT / ".github/workflows/skills-reviewer.md").read_text()
+        frontmatter = yaml.safe_load(source_text.split("---", 2)[1])
+        self.assertEqual(
+            frontmatter["on"]["pull_request"]["types"],
+            ["opened", "reopened", "synchronize", "ready_for_review", "edited", "closed"],
+        )
+        self.assertEqual(frontmatter["permissions"], {
+            "contents": "read",
+            "pull-requests": "read",
+            "copilot-requests": "write",
+        })
+        self.assertEqual(
+            frontmatter["concurrency"]["group"],
+            "gh-aw-${{ github.workflow }}-${{ github.event.action != 'edited' && github.event.pull_request.number || github.event.action == 'edited' && github.event.changes.base.ref.from && github.event.pull_request.number || github.run_id }}",
+        )
+        self.assertTrue(frontmatter["concurrency"]["cancel-in-progress"])
+        self.assertEqual(frontmatter["safe-outputs"]["create-pull-request-review-comment"]["max"], 10)
+        self.assertEqual(frontmatter["safe-outputs"]["add-comment"]["max"], 1)
+        self.assertNotIn("submit-pull-request-review", frontmatter["safe-outputs"])
+        self.assertFalse(frontmatter["safe-outputs"]["noop"]["report-as-issue"])
+        self.assertFalse(frontmatter["safe-outputs"]["report-failure-as-issue"])
+        self.assertTrue(all(re.search(r"@[0-9a-f]{40}$", skill) for skill in frontmatter["skills"]))
+        self.assertIn("Prefetch pull-request review context", source_text)
+        self.assertIn("/tmp/gh-aw/agent/pr-diff.patch", source_text)
+        self.assertIn("compare/$current_base_sha...$current_head_sha", source_text)
+        self.assertIn(r"\.github\/workflows\/.*\.lock\.yml", source_text)
+        self.assertIn(r"\.github\/aw\/actions-lock\.json", source_text)
+        self.assertIn(r"b\/([^\/]+\/)*(package-lock\.json", source_text)
+        self.assertIn("pr-issue-comments.json", source_text)
+        self.assertIn("steps.set-runtime-paths.outputs.GH_AW_SAFE_OUTPUTS", source_text)
+        self.assertIn('mkdir -p "$(dirname "$GH_AW_SAFE_OUTPUTS")"', source_text)
+        self.assertIn("BASE_CHANGED_FROM", source_text)
+        self.assertIn("current_state", source_text)
+        self.assertIn("Do not install packages, run tests", source_text)
+        self.assertIn("exit 1", source_text)
+
+        lock_text = (ROOT / ".github/workflows/skills-reviewer.lock.yml").read_text()
+        self.assertIn('\"compiler_version\":\"v0.88.2\"', lock_text.splitlines()[0])
+        self.assertRegex(lock_text, r"github/gh-aw-actions/setup@[0-9a-f]{40}")
+        self.assertIn("cancel-in-progress: true", lock_text)
+        self.assertIn('github.event.action != \'edited\'', lock_text)
+        self.assertIn('github.event.action == \'edited\' && github.event.changes.base.ref.from', lock_text)
+        self.assertIn(r'\"report-as-issue\":\"false\"', lock_text)
+        self.assertIn("GH_AW_FAILURE_REPORT_AS_ISSUE: \"false\"", lock_text)
+        self.assertIn("github.event.pull_request.head.repo.id == github.repository_id", lock_text)
+        self.assertIn('GH_AW_REQUIRED_ROLES: "admin,maintainer,write"', lock_text)
+        self.assertIn("deletion-only findings", source_text)
+        self.assertNotIn("submit_pull_request_review", lock_text)
+
+        actionlint = yaml.safe_load((ROOT / ".github/actionlint.yml").read_text())
+        lock_ignores = actionlint["paths"][".github/workflows/skills-reviewer.lock.yml"]["ignore"]
+        self.assertEqual(len(lock_ignores), 2)
+        self.assertTrue(any("copilot-requests" in pattern for pattern in lock_ignores))
+        self.assertTrue(any('unexpected key "queue"' in pattern for pattern in lock_ignores))
+
+    def test_skills_reviewer_prefetch_guards_state_and_filters_nested_locks(self) -> None:
+        script = agent_workflow_step("skills-reviewer.md", "Prefetch pull-request review context")
+        fake_bin = self.root / "bin"
+        fake_bin.mkdir()
+        fake_gh = fake_bin / "gh"
+        fake_gh.write_text("""#!/usr/bin/env bash
+set -euo pipefail
+if [ "$1 $2" = "pr view" ]; then
+  cat "$PR_META_FIXTURE"
+  exit 0
+fi
+printf '%s\\n' "$*" >> "$GH_CALL_LOG"
+case "$*" in
+  *compare/*) cat "$PR_DIFF_FIXTURE" ;;
+  *) printf '[]\\n' ;;
+esac
+""")
+        fake_gh.chmod(0o755)
+        metadata = self.root / "pr-meta.json"
+        patch = self.root / "pr.patch"
+        call_log = self.root / "gh-calls.log"
+        patch.write_text(
+            "diff --git a/web/package-lock.json b/web/package-lock.json\n"
+            "--- a/web/package-lock.json\n+++ b/web/package-lock.json\n@@ -1 +1 @@\n-old\n+new\n"
+            "diff --git a/src/app.py b/src/app.py\n"
+            "--- a/src/app.py\n+++ b/src/app.py\n@@ -1 +1 @@\n-old\n+new\n"
+        )
+
+        def execute(state: str, action: str, trigger_head: str = "head",
+                    base_changed_from: str = "") -> subprocess.CompletedProcess[str]:
+            metadata.write_text(json.dumps({
+                "state": state,
+                "baseRefOid": "base",
+                "headRefOid": "head",
+            }))
+            safe_outputs = self.root / action / "outputs.jsonl"
+            return run_step(
+                script,
+                self.root,
+                PATH=f'{fake_bin}{os.pathsep}{os.environ["PATH"]}',
+                PR_NUMBER="7",
+                PR_REPOSITORY="example/repo",
+                TRIGGER_HEAD_SHA=trigger_head,
+                EVENT_ACTION=action,
+                BASE_CHANGED_FROM=base_changed_from,
+                GH_AW_SAFE_OUTPUTS=str(safe_outputs),
+                PR_META_FIXTURE=str(metadata),
+                PR_DIFF_FIXTURE=str(patch),
+                GH_CALL_LOG=str(call_log),
+            )
+
+        for state, action, trigger_head in (
+            ("CLOSED", "closed", "head"),
+            ("OPEN", "edited", "head"),
+            ("OPEN", "synchronize", "old-head"),
+        ):
+            with self.subTest(state=state, action=action):
+                result = execute(state, action, trigger_head)
+                self.assertNotEqual(result.returncode, 0, result.stderr)
+                safe_outputs = self.root / action / "outputs.jsonl"
+                self.assertEqual(json.loads(safe_outputs.read_text())["noop"].keys(), {"message"})
+
+        result = execute("OPEN", "edited", base_changed_from="main")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        context = Path("/tmp/gh-aw/agent")
+        diff = (context / "pr-diff.patch").read_text()
+        self.assertNotIn("package-lock.json", diff)
+        self.assertIn("src/app.py", diff)
+        self.assertTrue((context / "pr-issue-comments.json").is_file())
+        self.assertIn("issues/7/comments", call_log.read_text())
 
     def test_yaml_paths_accept_trailing_newlines_and_reject_empty_lists(self) -> None:
         (self.root / ".yamllint.yml").write_text("extends: default\nrules:\n  document-start: disable\n")

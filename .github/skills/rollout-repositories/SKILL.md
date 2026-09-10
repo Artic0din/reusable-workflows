@@ -28,6 +28,12 @@ Do not advance the copied-skill manifest revision for a workflow-only change.
 Select and tailor skills, retain existing stronger guidance, and record only supported managed paths in .github/reusable-skills.json.
 Keep project-specific context in the consumer's documentation.
 
+When the user selects the engineering skills reviewer, install its Markdown source, generated lock, action-lock entry, lock-file `.gitattributes` rule, and any required path-specific linter exceptions as one repository-local unit.
+Merge shared action-lock and configuration entries into existing consumer files; reject conflicting pins instead of replacing unrelated settings.
+Adapt the source prompt and triggers to the consumer, compile the lock with the recorded gh-aw version, and never hand-edit generated YAML.
+Keep these workflow assets outside `.github/reusable-skills.json`, and record the reviewed library revision in the pull-request body.
+Do not make its check required until a real consumer pull request proves current-head completion and actionable review output.
+
 For updates, fetch the reviewed old and new library commits in this library checkout.
 Run scripts/sync_skills.py against a clean consumer checkout, first to preview and then with --apply.
 The command compares the old library source, the consumer's adapted file, and the new library source.
