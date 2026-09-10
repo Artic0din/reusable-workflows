@@ -1,4 +1,5 @@
 """Run the actual workflow shell steps against isolated consumer repositories."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -124,6 +125,7 @@ class WorkflowContractTests(unittest.TestCase):
             frontmatter["concurrency"]["group"],
             "gh-aw-${{ github.workflow }}-${{ github.event.action != 'edited' && github.event.pull_request.number || github.event.action == 'edited' && github.event.changes.base.ref.from && github.event.pull_request.number || github.run_id }}",
         )
+        self.assertEqual(frontmatter["max-turns"], 45)
         self.assertTrue(frontmatter["concurrency"]["cancel-in-progress"])
         self.assertEqual(frontmatter["safe-outputs"]["create-pull-request-review-comment"]["max"], 10)
         self.assertEqual(frontmatter["safe-outputs"]["add-comment"]["max"], 1)
@@ -146,11 +148,17 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("exit 1", source_text)
 
         lock_text = (ROOT / ".github/workflows/skills-reviewer.lock.yml").read_text()
-        self.assertIn('\"compiler_version\":\"v0.88.2\"', lock_text.splitlines()[0])
+        lock_metadata = json.loads(lock_text.splitlines()[0].removeprefix("# gh-aw-metadata: "))
+        self.assertEqual(lock_metadata["compiler_version"], "v0.88.2")
+        self.assertEqual(
+            lock_metadata["frontmatter_hash"],
+            hashlib.sha256(source_text.split("---", 2)[1].strip("\n").encode()).hexdigest(),
+        )
         self.assertRegex(lock_text, r"github/gh-aw-actions/setup@[0-9a-f]{40}")
         self.assertIn("cancel-in-progress: true", lock_text)
         self.assertIn('github.event.action != \'edited\'', lock_text)
         self.assertIn('github.event.action == \'edited\' && github.event.changes.base.ref.from', lock_text)
+        self.assertIn('"maxRuns":45', lock_text)
         self.assertIn(r'\"report-as-issue\":\"false\"', lock_text)
         self.assertIn("GH_AW_FAILURE_REPORT_AS_ISSUE: \"false\"", lock_text)
         self.assertIn("github.event.pull_request.head.repo.id == github.repository_id", lock_text)
