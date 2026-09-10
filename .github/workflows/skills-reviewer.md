@@ -14,6 +14,9 @@ permissions:
   contents: read
   pull-requests: read
   copilot-requests: write
+concurrency:
+  group: "gh-aw-${{ github.workflow }}-${{ github.event.action != 'edited' && github.event.pull_request.number || github.event.action == 'edited' && github.event.changes.base.ref.from && github.event.pull_request.number || github.run_id }}"
+  cancel-in-progress: true
 engine:
   id: copilot
 max-turns: 30
