@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 engine:
   id: copilot
-max-turns: 30
+max-turns: 45
 max-ai-credits: 2000
 max-daily-ai-credits: 10000
 network:
