@@ -10,6 +10,7 @@ description: Reviews current same-repository maintainer pull-request heads with 
       - ready_for_review
       - edited
       - closed
+  stale-check: false
 permissions:
   contents: read
   pull-requests: read
@@ -119,6 +120,26 @@ safe-outputs:
     report-as-issue: false
   report-failed-jobs: false
   report-failure-as-issue: false
+jobs:
+  activation:
+    outputs:
+      stale_lock_file_failed: ${{ steps.check-lock-file.outputs.stale_lock_file_failed == 'true' }}
+    steps:
+      - name: Check workflow lock file
+        id: check-lock-file
+        if: ${{ github.event.action != 'closed' }}
+        uses: actions/github-script@v9
+        env:
+          GH_AW_WORKFLOW_FILE: "skills-reviewer.lock.yml"
+          GH_AW_CONTEXT_WORKFLOW_REF: "${{ github.workflow_ref }}"
+        with:
+          script: |
+            const path = require('path');
+            const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
+            const { setupGlobals } = require(path.join(actionsDir, 'setup_globals.cjs'));
+            setupGlobals(core, github, context, exec, io, getOctokit);
+            const { main } = require(path.join(actionsDir, 'check_workflow_timestamp_api.cjs'));
+            await main();
 timeout-minutes: 15
 strict: true
 ---

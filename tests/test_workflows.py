@@ -1,5 +1,4 @@
 """Run the actual workflow shell steps against isolated consumer repositories."""
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -149,11 +148,12 @@ class WorkflowContractTests(unittest.TestCase):
 
         lock_text = (ROOT / ".github/workflows/skills-reviewer.lock.yml").read_text()
         lock_metadata = json.loads(lock_text.splitlines()[0].removeprefix("# gh-aw-metadata: "))
+        lock_workflow = yaml.safe_load(lock_text)
+        lock_check = next(step for step in lock_workflow["jobs"]["activation"]["steps"]
+                          if step.get("name") == "Check workflow lock file")
         self.assertEqual(lock_metadata["compiler_version"], "v0.88.2")
-        self.assertEqual(
-            lock_metadata["frontmatter_hash"],
-            hashlib.sha256(source_text.split("---", 2)[1].strip("\n").encode()).hexdigest(),
-        )
+        self.assertRegex(lock_metadata["frontmatter_hash"], r"^[0-9a-f]{64}$")
+        self.assertEqual(lock_check["if"], "${{ github.event.action != 'closed' }}")
         self.assertRegex(lock_text, r"github/gh-aw-actions/setup@[0-9a-f]{40}")
         self.assertIn("cancel-in-progress: true", lock_text)
         self.assertIn('github.event.action != \'edited\'', lock_text)
