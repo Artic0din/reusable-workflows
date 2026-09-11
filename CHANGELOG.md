@@ -20,6 +20,7 @@ All notable changes are documented here using Keep a Changelog conventions.
 - Serialized dependency auto-merge attempts within the shared workflow and retained pending validations when delayed events arrive.
 - Cleared earlier automatic merge requests before verifying dependency updates.
 - Preserved current automatic merge requests when older events were rerun.
+- Separated unrelated pull-request title/body edited events into a non-blocking concurrency lane so maintainers can still review active, in-progress pull requests.
 
 - Rejected merge-queue callers before enabling dependency automatic merges, whose cancellation contract applies only to native auto-merge requests.
 - Revoked existing automatic merge requests when complete dependency eligibility no longer succeeds, including missing metadata, major updates and failures.
