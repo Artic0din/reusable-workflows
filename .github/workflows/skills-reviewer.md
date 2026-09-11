@@ -60,23 +60,23 @@ steps:
       if [ "$EVENT_ACTION" = "closed" ] || [ "$current_state" != "OPEN" ]; then
         jq -cn \
           --arg message "Skipped pull request in $current_state state." \
-          '{noop: {message: $message}}' >> "$GH_AW_SAFE_OUTPUTS"
-        exit 1
+          '{type: "noop", message: $message}' >> "$GH_AW_SAFE_OUTPUTS"
+        exit 0
       fi
 
       if [ "$EVENT_ACTION" = "edited" ] && [ -z "$BASE_CHANGED_FROM" ]; then
         jq -cn \
           --arg message "Skipped pull-request edit because its base branch did not change." \
-          '{noop: {message: $message}}' >> "$GH_AW_SAFE_OUTPUTS"
-        exit 1
+          '{type: "noop", message: $message}' >> "$GH_AW_SAFE_OUTPUTS"
+        exit 0
       fi
 
       current_head_sha=$(jq -r '.headRefOid' "$context_dir/pr-meta.json")
       if [ "$current_head_sha" != "$TRIGGER_HEAD_SHA" ]; then
         jq -cn \
           --arg message "Skipped stale pull-request head $TRIGGER_HEAD_SHA; current head is $current_head_sha." \
-          '{noop: {message: $message}}' >> "$GH_AW_SAFE_OUTPUTS"
-        exit 1
+          '{type: "noop", message: $message}' >> "$GH_AW_SAFE_OUTPUTS"
+        exit 0
       fi
 
       current_base_sha=$(jq -r '.baseRefOid' "$context_dir/pr-meta.json")
