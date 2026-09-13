@@ -91,13 +91,5 @@ jobs:
           PY
       - name: Verify merge-only secret detection
         run: python -m unittest discover -s tests -p test_secret_scan.py -v
-      - name: Verify missing-file rejection
-        id: missing
-        continue-on-error: true  # The following step requires this intentional negative case to fail.
-        uses: chrisreddington/validate-file-exists@ff1ba041fbaa672eeb84a53b8c33ffd381c080f2  # v0.0.10
-        with:
-          required-files: tests/fixtures/intentionally-absent-file
-      - name: Require missing-file failure
-        env:
-          MISSING_RESULT: ${{ steps.missing.outcome }}
-        run: test "$MISSING_RESULT" = failure
+      - name: Verify baseline success and failure paths
+        run: python -m unittest discover -s tests -p test_workflows.py -k baseline -v

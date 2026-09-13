@@ -18,11 +18,19 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - name: Reject an empty baseline
+      - name: Validate required files
         env:
           REQUIRED_FILES: ${{ inputs.required-files }}
-        run: test -n "${REQUIRED_FILES//[[:space:],]/}"
-      - name: Validate required files
-        uses: chrisreddington/validate-file-exists@ff1ba041fbaa672eeb84a53b8c33ffd381c080f2  # v0.0.10
-        with:
-          required-files: ${{ inputs.required-files }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          paths = [entry.strip() for entry in os.environ["REQUIRED_FILES"].split(",") if entry.strip()]
+          if not paths:
+              raise SystemExit("required-files must include at least one path")
+          missing = [path for path in paths if not Path(path).exists()]
+          if missing:
+              raise SystemExit(f"Required paths do not exist: {missing!r}")
+          print(f"Validated {len(paths)} required paths")
+          PY

@@ -14,6 +14,8 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Fixed
 
+- Removed the baseline check's deprecated Node 20 action dependency by validating required paths with the runner's Python standard library.
+  Preserved empty-list and missing-path failures and added regression coverage for literal filenames, whitespace, directories and symlinks.
 - Increased the Engineering Skills Reviewer runtime invocation cap from 30 to 45 to reduce false-failure `HTTP 429` runs on larger pull requests.
 - Stopped stale, closed, and unrelated pull-request edit runs before agent execution, initialized their safe-output path, deduplicated against issue comments, and excluded nested dependency locks before truncating review context.
 - Rechecked dependency pull-request targets after metadata verification before enabling automatic merges.
