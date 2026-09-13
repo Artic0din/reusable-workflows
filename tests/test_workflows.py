@@ -42,10 +42,45 @@ class WorkflowContractTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
 
     def test_baseline_rejects_empty_and_whitespace_lists(self) -> None:
-        script = workflow_step("baseline.yml", "Reject an empty baseline")
+        script = workflow_step("baseline.yml", "Validate required files")
         for value in ("", " , , \n", " \t"):
             self.assertNotEqual(run_step(script, self.root, REQUIRED_FILES=value).returncode, 0)
+        (self.root / "README.md").write_text("fixture\n")
         self.assertEqual(run_step(script, self.root, REQUIRED_FILES="README.md").returncode, 0)
+
+    def test_baseline_accepts_literal_paths_and_ignores_empty_entries(self) -> None:
+        script = workflow_step("baseline.yml", "Validate required files")
+        (self.root / "docs").mkdir()
+        (self.root / "docs/with spaces.md").write_text("fixture\n")
+        (self.root / "$(touch injected)").write_text("literal filename\n")
+        (self.root / "linked").symlink_to("docs/with spaces.md")
+        result = run_step(script, self.root, REQUIRED_FILES=(
+            " docs, docs/with spaces.md, , $(touch injected), linked, \n"
+        ))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.root / "injected").exists())
+
+    def test_baseline_reports_all_missing_paths_and_rejects_dangling_links(self) -> None:
+        script = workflow_step("baseline.yml", "Validate required files")
+        (self.root / "README.md").write_text("fixture\n")
+        (self.root / "dangling").symlink_to("absent-target")
+        result = run_step(script, self.root, REQUIRED_FILES="README.md, missing, dangling")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing", result.stderr)
+        self.assertIn("dangling", result.stderr)
+
+    def test_baseline_cannot_import_caller_modules(self) -> None:
+        script = workflow_step("baseline.yml", "Validate required files")
+        (self.root / "pathlib.py").write_text(
+            "open('imported-caller-code', 'w').write('executed')\n"
+            "class Path:\n"
+            "    def __init__(self, path): pass\n"
+            "    def exists(self): return True\n"
+        )
+        result = run_step(script, self.root, REQUIRED_FILES="missing", PYTHONPATH=str(self.root))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.root / "imported-caller-code").exists())
+        self.assertIn("missing", result.stderr)
 
     def test_python_runner_propagates_failure_and_rejects_zero_tests(self) -> None:
         (self.root / "tests").mkdir()

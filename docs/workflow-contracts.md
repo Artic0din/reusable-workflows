@@ -11,7 +11,8 @@ The Dependabot job additionally owns the dedicated per-PR lock described below.
 baseline.yml accepts required-files, a comma-separated list.
 It defaults to README.md, LICENSE, .gitignore, and AGENTS.md.
 Empty lists and missing files fail.
-The required-files action is pinned to a verified release.
+The runner's Python standard library checks literal paths in isolated mode, excluding caller modules and Python environment overrides from imports.
+Surrounding whitespace and empty comma-separated entries are ignored; directories and symlinks to existing paths retain their previous behavior.
 Dev Containers are optional project choices and are not a baseline requirement.
 
 ## CI
