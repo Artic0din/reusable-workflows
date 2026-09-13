@@ -22,7 +22,7 @@ jobs:
         env:
           REQUIRED_FILES: ${{ inputs.required-files }}
         run: |
-          python3 - <<'PY'
+          python3 -I - <<'PY'
           import os
           from pathlib import Path
 

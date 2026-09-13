@@ -69,6 +69,19 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("missing", result.stderr)
         self.assertIn("dangling", result.stderr)
 
+    def test_baseline_cannot_import_caller_modules(self) -> None:
+        script = workflow_step("baseline.yml", "Validate required files")
+        (self.root / "pathlib.py").write_text(
+            "open('imported-caller-code', 'w').write('executed')\n"
+            "class Path:\n"
+            "    def __init__(self, path): pass\n"
+            "    def exists(self): return True\n"
+        )
+        result = run_step(script, self.root, REQUIRED_FILES="missing", PYTHONPATH=str(self.root))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.root / "imported-caller-code").exists())
+        self.assertIn("missing", result.stderr)
+
     def test_python_runner_propagates_failure_and_rejects_zero_tests(self) -> None:
         (self.root / "tests").mkdir()
         script = workflow_step("ci.yml", "Run Python tests")
