@@ -20,6 +20,8 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Fixed
 
+- Advanced the library-owned validation-tools checkout in `linter.yml` to the revision that drops zizmor, so callers stop installing the unused dependency on every linter run.
+
 - Removed the baseline check's deprecated Node 20 action dependency by validating required paths with the runner's Python standard library in isolated mode.
   Preserved empty-list and missing-path failures and added regression coverage for literal filenames, whitespace, directories and symlinks.
 - Increased the Engineering Skills Reviewer runtime invocation cap from 30 to 45 to reduce false-failure `HTTP 429` runs on larger pull requests.
