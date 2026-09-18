@@ -5,6 +5,8 @@ import unittest
 
 from scripts.validate_agent_config import validate
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 class AgentConfigurationTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -88,3 +90,27 @@ class AgentConfigurationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SkillDiscoveryLayoutTests(unittest.TestCase):
+    """Guard the .agents/skills discovery path against silent breakage."""
+
+    canonical = ROOT / ".github/skills"
+    discovery = ROOT / ".agents/skills"
+
+    def test_discovery_path_is_a_symlink_to_the_canonical_directory(self) -> None:
+        self.assertTrue(self.discovery.is_symlink(), ".agents/skills must stay a symlink, not a copy")
+        self.assertTrue(self.discovery.exists(), ".agents/skills is dangling")
+        self.assertEqual(self.discovery.resolve(), self.canonical.resolve())
+        self.assertTrue(self.discovery.resolve().is_relative_to(ROOT.resolve()),
+                        ".agents/skills must resolve inside the repository")
+
+    def test_every_canonical_skill_is_reachable_through_the_discovery_path(self) -> None:
+        canonical = sorted(path.name for path in self.canonical.iterdir()
+                           if (path / "SKILL.md").is_file())
+        self.assertTrue(canonical, "no skills found under .github/skills")
+        discovered = sorted(path.name for path in self.discovery.iterdir()
+                            if (path / "SKILL.md").is_file())
+        self.assertEqual(discovered, canonical)
+
+

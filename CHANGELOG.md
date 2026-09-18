@@ -11,6 +11,7 @@ All notable changes are documented here using Keep a Changelog conventions.
 - Added an explicit repository rollout skill and a tested three-way update helper for tailored consumer skills.
 - Added configurable repository checks, Python/npm CI, generated-output verification, CodeQL, guarded dependency automation, and local setup examples.
 - Added README documentation, heading-preserving instruction refresh, workflow maintenance, and test-gap review skills.
+- Added an `.agents/skills` symlink to `.github/skills` so agents that scan the `.agents` convention discover this repository's skills without duplicating them.
 
 ### Removed
 

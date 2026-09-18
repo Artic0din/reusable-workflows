@@ -6,6 +6,8 @@ Planned work belongs in GitHub Issues for Artic0din/reusable-workflows.
 
 ## Skills
 
+Skills live in `.github/skills`. `.agents/skills` is a symlink to that directory so Claude Code, Codex, Cursor, and Antigravity discover the same set; GitHub Copilot reads either path.
+
 Use [.github/skills/github-actions/SKILL.md](.github/skills/github-actions/SKILL.md) for workflow changes.
 Use [.github/skills/readme-docs/SKILL.md](.github/skills/readme-docs/SKILL.md) for documentation-only work.
 Use [.github/skills/refresh-instructions/SKILL.md](.github/skills/refresh-instructions/SKILL.md) for instruction accuracy without changing headings.
