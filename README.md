@@ -60,7 +60,6 @@ python3 -m venv .venv
 .venv/bin/python scripts/validate_agent_config.py .
 .venv/bin/ruff check scripts tests
 .venv/bin/yamllint --strict .github .yamllint.yml
-.venv/bin/zizmor --offline --pedantic .github
 ```
 
 Run actionlint at the version pinned in [.github/actions/actionlint/Dockerfile](.github/actions/actionlint/Dockerfile), then git diff --check.

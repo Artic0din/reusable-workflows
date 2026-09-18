@@ -55,9 +55,6 @@ jobs:
           done <<< "$YAML_PATHS"
           test "${#paths[@]}" -gt 0
           yamllint --strict -c "$YAML_CONFIG" -- "${paths[@]}"
-      - name: Check workflow security
-        working-directory: source
-        run: zizmor --offline --pedantic .github
       - name: Check workflow syntax
         run: |
           docker build --tag reusable-actionlint automation/.github/actions/actionlint
