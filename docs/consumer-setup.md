@@ -1,9 +1,10 @@
 # Consumer setup
 
-## Choose and pin a revision
+## Reference the library
 
-Review the library pull request or release and select its full commit SHA.
-Use that exact SHA in the external job-level uses reference.
+Use `@main` in the external job-level uses reference.
+Callers then receive library changes on their next run, with no bump pull request in each consumer.
+A caller that needs a change frozen can still use a full commit SHA, at the cost of a pull request in that repository for every library update.
 The library pins its own executable tools; no second caller input is required.
 GitHub Actions does not follow repository redirects, so references use the permanent Artic0din/reusable-workflows namespace.
 
@@ -11,8 +12,8 @@ The executable local calls in [validate-self.yml](../.github/workflows/validate-
 The external pilot is maintained as a separate consumer pull request.
 A public library can be called from public or private projects when their Actions policy permits it.
 
-This complete caller uses the v1.0.0 release revision and a minimal file baseline.
-Change the required file list to match the consumer, and review newer library revisions before adopting them.
+This complete caller tracks `@main` with a minimal file baseline.
+Change the required file list to match the consumer.
 
 ```yaml
 name: Repository checks
@@ -24,7 +25,7 @@ permissions:
   contents: read
 jobs:
   baseline:
-    uses: Artic0din/reusable-workflows/.github/workflows/baseline.yml@c913ad3e22a42c75bfcf0029448cda48dc546ff1  # v1.0.0
+    uses: Artic0din/reusable-workflows/.github/workflows/baseline.yml@main
     with:
       required-files: README.md, .gitignore
 ```
@@ -82,10 +83,10 @@ Record its library source revision in the rollout pull-request body and use the 
 
 ## Dependency maintenance
 
-Keep a local Dependabot github-actions entry so external reusable-workflow references receive updates.
-Use release-associated SHAs with same-line version comments once releases exist.
+A `@main` reference receives library updates without a Dependabot pull request, so this library needs no github-actions entry in the caller.
+Keep a local Dependabot github-actions entry for any third-party actions the caller uses directly.
 Review workflow changes and any embedded validation-tool pin updates together.
-Update matching version prose and workflow-contract links in consumer guides and skills in the same PR, including Dependabot PRs.
+Update matching workflow-contract links in consumer guides and skills in the same PR, including Dependabot PRs.
 Keep copied-skill manifest revisions unchanged for workflow-only updates; those revisions record the skills' merge bases.
 Exclude shared-workflow updates from existing dependency auto-merge paths until they receive the required review and validation.
 Configure only the package ecosystems that exist in the caller.
@@ -103,13 +104,14 @@ See the [Dependabot contract](workflow-contracts.md#dependabot) for the reserved
 The workflow revokes an earlier automatic merge request whenever the complete eligibility decision no longer succeeds.
 It clears earlier requests before verification begins and enables a new request only after success.
 Keep invoking the workflow with enabled set to false when disabling automatic merges so the next matching Dependabot event can revoke an earlier request.
-Keep the caller's target-event entrypoint and pin the shared workflow to reviewed code.
+Keep the caller's target-event entrypoint and reference the shared workflow at `@main`.
 Do not automatically approve dependency reviews.
 
 ## Updates and rollback
 
 Validate a library release against its self-tests and a representative consumer before broad adoption.
-Open consumer PRs for revision changes and preserve required-check contexts.
-Rollback by reverting the consumer's workflow pins to a previously verified commit.
+Preserve required-check contexts when a change alters them; a `@main` caller adopts everything else without a pull request.
+Roll back by reverting the change in this library, which every `@main` caller picks up on its next run.
+A caller that chose a full commit SHA rolls back by reverting that reference instead.
 Changes to inputs, permissions, output checks, or result semantics require a documented migration.
 Never publish a release or enable privileged behavior solely because YAML parsing passed.

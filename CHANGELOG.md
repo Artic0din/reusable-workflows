@@ -17,6 +17,12 @@ All notable changes are documented here using Keep a Changelog conventions.
 - Removed the zizmor workflow-security scan from the shared validation workflow, its configuration file, and the locked development requirements.
   Callers referencing this library at `@main` no longer need a `.github/zizmor.yml` policy exception; actionlint continues to validate workflow syntax and the secret scan continues to check history.
 
+### Changed
+
+- Documented `@main` as the consumer reference for this library's reusable workflows, replacing the full-commit-SHA pin.
+  Callers receive library changes on their next run and no longer need a Dependabot `github-actions` entry for this library; rollback is a revert here rather than a pull request in every caller.
+  A caller that needs a change frozen can still use a full commit SHA. The library-owned validation-tools checkout, third-party actions, the actionlint image, the gitleaks binary, and the pinned review skills are unaffected.
+
 ### Fixed
 
 - Removed the baseline check's deprecated Node 20 action dependency by validating required paths with the runner's Python standard library in isolated mode.

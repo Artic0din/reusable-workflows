@@ -126,7 +126,7 @@ Changing the release requires updating and verifying its digest together.
 
 codex-review-gate.yml requires a positive integer pull-request-number and caller permissions contents: read, issues: read, pull-requests: read, and statuses: write.
 It does not check out code, execute pull-request content, approve reviews, merge changes, or receive publishing credentials.
-The public workflow source must be pinned to a reviewed full commit SHA in the caller.
+The caller references the public workflow source at `@main`.
 
 The workflow publishes the commit-status context `Codex review complete`.
 Require this exact context from GitHub Actions after verifying a real consumer run; the workflow job's own success is not the completion signal.

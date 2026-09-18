@@ -20,10 +20,10 @@ Do not infer a build, license, test command or deployment permission from a temp
 
 ## Prepare changes
 
-For onboarding, select applicable reusable workflows and pin a reviewed release commit with its version comment.
+For onboarding, select applicable reusable workflows and reference them at `@main`.
 Preserve existing checks, events, runner requirements and aggregate failure handling.
 Check existing dependency auto-merge paths and require manual review for shared-workflow upgrades.
-Update associated workflow-contract links and version prose in the same PR as each pin change, including Dependabot PRs.
+Update associated workflow-contract links in the same PR as each reference change, including Dependabot PRs.
 Do not advance the copied-skill manifest revision for a workflow-only change.
 Select and tailor skills, retain existing stronger guidance, and record only supported managed paths in .github/reusable-skills.json.
 Keep project-specific context in the consumer's documentation.
