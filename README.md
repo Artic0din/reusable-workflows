@@ -7,7 +7,8 @@ Each caller selects the checks it needs and retains its own application behavior
 
 Read [workflow contracts](docs/workflow-contracts.md) before adding a caller.
 Reusable workflows live directly in .github/workflows and use workflow_call.
-Reference this public repository with a full reviewed commit SHA.
+Reference these reusable workflows at `@main` in the caller's job-level `uses:` line.
+`@main` resolves to the tip of this repository's default branch each time the caller runs, so a bad change is rolled back by reverting it here rather than by opening a pull request in every caller.
 The workflow library owns the immutable revision of its executable validation tools.
 The validator checks the caller checkout and loads its own code from a separately pinned library checkout.
 

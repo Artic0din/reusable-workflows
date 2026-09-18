@@ -3,8 +3,8 @@
 Workflow references and copied skills have separate update paths.
 Applying updates rejects managed files with assume-unchanged or skip-worktree index flags, including selected files with no incoming change.
 Reviewed source revisions are read without Git replacement objects or implicit network fetches.
-Dependabot updates versioned workflow pins.
-Those PRs must also update matching workflow-version prose and contract links in consumer guides and skills.
+A `@main` workflow reference is never rewritten in the caller; it resolves to the tip of the default branch at each run. Only a caller that chose a full commit SHA needs a Dependabot pull request to advance its reference.
+Any pull request that does change a workflow reference must also update matching contract links in consumer guides and skills.
 They must preserve the copied-skill manifest revision unless copied skills are updated through the three-way merge process.
 The [rollout skill](../.github/skills/rollout-repositories/SKILL.md) prepares skill-update pull requests using the maintainer's existing GitHub CLI session.
 It is explicitly invoked; installation does not schedule work, create cross-repository credentials, or merge changes.
@@ -59,5 +59,5 @@ Local links and agent metadata still need validation after a successful merge; t
 ## Rollback
 
 Revert the consumer's skill-update commit, including its manifest revision.
-Workflow rollback separately restores the previous pinned workflow revision.
+Workflow rollback is separate: revert the change in this library, which every `@main` caller picks up on its next run.
 Never reset unrelated consumer changes to roll back shared guidance.

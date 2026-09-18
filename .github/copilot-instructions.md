@@ -35,7 +35,8 @@
 
 ## Implementation conventions
 
-- Pin external actions and consumer references to full commit SHAs, with verified version comments for released actions.
+- Pin external actions to full commit SHAs, with verified version comments for released actions.
+- Consumers reference this library's reusable workflows at `@main`; the embedded validation-tools checkout stays a fixed commit so callers cannot substitute executable tooling.
 - Keep checks read-only and disable privileged features until the caller explicitly opts in.
 - Recheck current Dependabot identity, signed commits, strict rules, and expected head; never approve reviews or bypass protections.
 - Pass event values through environment variables, not shell interpolation.
