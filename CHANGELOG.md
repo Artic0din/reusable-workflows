@@ -12,6 +12,11 @@ All notable changes are documented here using Keep a Changelog conventions.
 - Added configurable repository checks, Python/npm CI, generated-output verification, CodeQL, guarded dependency automation, and local setup examples.
 - Added README documentation, heading-preserving instruction refresh, workflow maintenance, and test-gap review skills.
 
+### Removed
+
+- Removed the zizmor workflow-security scan from the shared validation workflow, its configuration file, and the locked development requirements.
+  Callers referencing this library at `@main` no longer need a `.github/zizmor.yml` policy exception; actionlint continues to validate workflow syntax and the secret scan continues to check history.
+
 ### Fixed
 
 - Removed the baseline check's deprecated Node 20 action dependency by validating required paths with the runner's Python standard library in isolated mode.

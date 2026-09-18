@@ -13,17 +13,17 @@ concurrency:
 jobs:
   baseline:
     name: Baseline caller
-    uses: ./.github/workflows/baseline.yml  # zizmor: ignore[self-repository]
+    uses: ./.github/workflows/baseline.yml
   python:
     name: Python/npm caller
-    uses: ./.github/workflows/ci.yml  # zizmor: ignore[self-repository]
+    uses: ./.github/workflows/ci.yml
     with:
       python-requirements: requirements-dev.txt
       npm: true
       npm-directory: tests/fixtures/npm
   npm:
     name: npm caller
-    uses: ./.github/workflows/ci.yml  # zizmor: ignore[self-repository]
+    uses: ./.github/workflows/ci.yml
     with:
       python: false
       npm: true
@@ -31,27 +31,27 @@ jobs:
       npm-build-script: build
   generated:
     name: Generated-output caller
-    uses: ./.github/workflows/check-dist.yml  # zizmor: ignore[self-repository]
+    uses: ./.github/workflows/check-dist.yml
     with:
       output-path: tests/fixtures/npm/dist
       working-directory: tests/fixtures/npm
   workflows:
     name: Workflow-validation caller
-    uses: ./.github/workflows/linter.yml  # zizmor: ignore[self-repository]
+    uses: ./.github/workflows/linter.yml
     with:
       yaml-paths: |
         .github
         .yamllint.yml
   secrets:
     name: Secret-scan caller
-    uses: ./.github/workflows/secret-scan.yml  # zizmor: ignore[self-repository]
+    uses: ./.github/workflows/secret-scan.yml
   codeql:
     name: CodeQL caller
     permissions:
       contents: read
       actions: read  # CodeQL reads caller workflow-run metadata.
       security-events: write  # Authorize this explicitly requested public-repository scan.
-    uses: ./.github/workflows/codeql-analysis.yml  # zizmor: ignore[self-repository]
+    uses: ./.github/workflows/codeql-analysis.yml
     with:
       enabled: true
       languages: '["actions","python"]'

@@ -51,7 +51,7 @@ The actionlint Dockerfile and validation dependencies are library-owned.
 yaml-paths is a newline-separated list, default .github.
 Blank lines are ignored, including the trailing newline from YAML block scalars; an empty list fails.
 yaml-config defaults to the caller's .yamllint.yml.
-YAML checks, actionlint, and offline pedantic zizmor fail the workflow when they find problems.
+YAML checks and actionlint fail the workflow when they find problems.
 Callers retain their own language-specific lint and automation tests.
 
 validate-agent-config defaults to true.
@@ -168,7 +168,7 @@ Closing or pushing one PR also refreshes any remaining PRs on its previous head.
 `skills-reviewer.md` is the maintained gh-aw source and `skills-reviewer.lock.yml` is its generated executable workflow.
 Keep the pair in the consuming repository because pull-request event workflows must be present on the caller's default branch and cannot be delivered through a job-level `workflow_call`.
 Edit the Markdown source and regenerate the lock with the gh-aw version recorded in its metadata; never edit the lock directly.
-The repository excludes generated locks from formatting-only yamllint rules and generator-owned zizmor findings while actionlint and gh-aw continue to validate executable syntax and policy.
+The repository excludes generated locks from formatting-only yamllint rules while actionlint and gh-aw continue to validate executable syntax and policy.
 The pinned actionlint predates `copilot-requests` and gh-aw's generated `queue` extension, so path-specific ignores suppress only those two unknown-key diagnostics for this lock.
 
 The workflow runs for opened, reopened, synchronized, ready-for-review, edited, and closed pull requests.

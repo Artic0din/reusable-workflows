@@ -19,7 +19,7 @@
 
 - Create a feature branch and a normal pull request; reference the actual issue.
 - Create .venv with Python from .python-version and install requirements-dev.txt with pip --require-hashes.
-- Run python -m unittest discover -s tests -v, ruff check scripts tests, yamllint --strict .github .yamllint.yml, zizmor --offline --pedantic .github, and actionlint.
+- Run python -m unittest discover -s tests -v, ruff check scripts tests, yamllint --strict .github .yamllint.yml, and actionlint.
 - Use the actionlint version and digest in .github/actions/actionlint/Dockerfile.
 - Regenerate requirements-dev.txt with uv pip compile requirements-dev.in --generate-hashes --output-file requirements-dev.txt --python-version 3.14.
 - Scan staged and outgoing commits with gitleaks before committing and pushing.

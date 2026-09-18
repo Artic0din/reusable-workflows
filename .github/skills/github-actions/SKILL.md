@@ -24,7 +24,7 @@ Use [the instruction refresh skill](../refresh-instructions/SKILL.md) when instr
 
 ## Validate
 
-Run Python regression tests, Ruff, strict yamllint, offline pedantic zizmor, actionlint, and git diff --check.
+Run Python regression tests, Ruff, strict yamllint, actionlint, and git diff --check.
 Run `gh aw compile <workflow> --validate --no-check-update` and confirm it reports no warnings before validating the generated lock with the repository linters.
 Execute the real workflow shell steps in temporary consumer repositories for failure-path tests.
 Run the local and outgoing secret scans before publishing commits.

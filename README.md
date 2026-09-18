@@ -23,7 +23,7 @@ CodeQL eligibility and dependency auto-merge activation remain caller-owned.
 | Configurable required files | [.github/workflows/baseline.yml](.github/workflows/baseline.yml) |
 | Python unittest and npm scripts | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
 | Checked-in generated output | [.github/workflows/check-dist.yml](.github/workflows/check-dist.yml) |
-| Workflow syntax/security and agent configuration | [.github/workflows/linter.yml](.github/workflows/linter.yml) |
+| Workflow syntax and agent configuration | [.github/workflows/linter.yml](.github/workflows/linter.yml) |
 | Explicitly enabled CodeQL | [.github/workflows/codeql-analysis.yml](.github/workflows/codeql-analysis.yml) |
 | Verified, opt-in Dependabot auto-merge | [.github/workflows/dependabot-automerge.yml](.github/workflows/dependabot-automerge.yml) |
 | Redacted history secret scanning | [.github/workflows/secret-scan.yml](.github/workflows/secret-scan.yml) |
@@ -60,7 +60,6 @@ python3 -m venv .venv
 .venv/bin/python scripts/validate_agent_config.py .
 .venv/bin/ruff check scripts tests
 .venv/bin/yamllint --strict .github .yamllint.yml
-.venv/bin/zizmor --offline --pedantic .github
 ```
 
 Run actionlint at the version pinned in [.github/actions/actionlint/Dockerfile](.github/actions/actionlint/Dockerfile), then git diff --check.
