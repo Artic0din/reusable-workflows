@@ -20,7 +20,7 @@ All notable changes are documented here using Keep a Changelog conventions.
 ### Changed
 
 - Documented `@main` as the consumer reference for this library's reusable workflows, replacing the full-commit-SHA pin.
-  Callers receive library changes on their next run and no longer need a Dependabot `github-actions` entry for this library; rollback is a revert here rather than a pull request in every caller.
+  `@main` resolves to the tip of the default branch at each caller run, so nothing is rewritten in the caller and Dependabot has nothing to bump for this library; rollback is a revert here rather than a pull request in every caller.
   A caller that needs a change frozen can still use a full commit SHA. The library-owned validation-tools checkout, third-party actions, the actionlint image, the gitleaks binary, and the pinned review skills are unaffected.
 
 ### Fixed

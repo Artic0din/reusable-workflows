@@ -3,8 +3,8 @@
 ## Reference the library
 
 Use `@main` in the external job-level uses reference.
-Callers then receive library changes on their next run, with no bump pull request in each consumer.
-A caller that needs a change frozen can still use a full commit SHA, at the cost of a pull request in that repository for every library update.
+`@main` resolves to the tip of this repository's default branch each time the caller runs, so no bump pull request is needed in each consumer.
+A caller that needs a change frozen can still use a full commit SHA. That caller stays on the named commit and is unaffected by library changes until a pull request in its own repository advances the reference.
 The library pins its own executable tools; no second caller input is required.
 GitHub Actions does not follow repository redirects, so references use the permanent Artic0din/reusable-workflows namespace.
 
@@ -83,7 +83,7 @@ Record its library source revision in the rollout pull-request body and use the 
 
 ## Dependency maintenance
 
-A `@main` reference receives library updates without a Dependabot pull request, so this library needs no github-actions entry in the caller.
+A `@main` reference never changes in the caller, so Dependabot has nothing to bump and this library needs no github-actions entry there.
 Keep a local Dependabot github-actions entry for any third-party actions the caller uses directly.
 Review workflow changes and any embedded validation-tool pin updates together.
 Update matching workflow-contract links in consumer guides and skills in the same PR, including Dependabot PRs.
@@ -109,9 +109,9 @@ Do not automatically approve dependency reviews.
 
 ## Updates and rollback
 
-Validate a library release against its self-tests and a representative consumer before broad adoption.
-Preserve required-check contexts when a change alters them; a `@main` caller adopts everything else without a pull request.
-Roll back by reverting the change in this library, which every `@main` caller picks up on its next run.
+Validate a change against this library's self-tests and a representative consumer before merging it to the default branch, because every `@main` caller runs it from that point.
+A change that alters a check context also needs matching ruleset or branch-protection updates in each consumer; a `@main` caller adopts every other change without a pull request.
+Roll back by reverting the change in this library; every `@main` caller runs the reverted code from that point.
 A caller that chose a full commit SHA rolls back by reverting that reference instead.
 Changes to inputs, permissions, output checks, or result semantics require a documented migration.
 Never publish a release or enable privileged behavior solely because YAML parsing passed.

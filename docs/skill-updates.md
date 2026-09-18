@@ -3,7 +3,7 @@
 Workflow references and copied skills have separate update paths.
 Applying updates rejects managed files with assume-unchanged or skip-worktree index flags, including selected files with no incoming change.
 Reviewed source revisions are read without Git replacement objects or implicit network fetches.
-A `@main` workflow reference updates itself; only a caller that chose a full commit SHA needs a Dependabot pull request to advance it.
+A `@main` workflow reference is never rewritten in the caller; it resolves to the tip of the default branch at each run. Only a caller that chose a full commit SHA needs a Dependabot pull request to advance its reference.
 Any pull request that does change a workflow reference must also update matching contract links in consumer guides and skills.
 They must preserve the copied-skill manifest revision unless copied skills are updated through the three-way merge process.
 The [rollout skill](../.github/skills/rollout-repositories/SKILL.md) prepares skill-update pull requests using the maintainer's existing GitHub CLI session.
