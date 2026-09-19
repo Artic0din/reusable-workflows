@@ -118,6 +118,8 @@ Do not automatically approve dependency reviews.
 Validate a change against this library's self-tests and a representative consumer before merging it to the default branch, because every `@main` caller runs it from that point.
 A change that alters a check context also needs matching ruleset or branch-protection updates in each consumer; a `@main` caller adopts every other change without a pull request.
 Roll back by reverting the change in this library; every `@main` caller runs the reverted code from that point.
-A caller that chose a full commit SHA rolls back by reverting that reference instead.
+A caller that chose a full commit SHA rolls back the workflow definition by reverting that reference.
+That does not roll back `linter.yml`'s validation bundle, which resolves `main` on every run regardless of how the caller references the workflow.
+A bad change to the scripts, the dependency lock or the actionlint image has to be reverted in this library; there is no caller-side rollback for it.
 Changes to inputs, permissions, output checks, or result semantics require a documented migration.
 Never publish a release or enable privileged behavior solely because YAML parsing passed.
