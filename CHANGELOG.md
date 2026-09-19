@@ -20,6 +20,10 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Changed
 
+- Exercised the proposed yamllint before merge. The self-test's linter caller installs yamllint from `main`'s lock,
+  so a pull request changing that pin was never run against the repository's YAML; an incompatible update would
+  have broken `linter.yml` for every caller on merge. The source job now runs the caller's own yamllint command
+  with the proposed lock and checkout.
 - Exercised the proposed actionlint bundle before merge. `linter.yml` builds that image from this library's `main`
   checkout, so a pull request changing its Dockerfile previously reached every caller the moment it merged without
   ever being built. `validate-self.yml` now builds and runs the pull request's own image against the pull request

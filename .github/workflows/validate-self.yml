@@ -72,6 +72,11 @@ jobs:
         run: python -m pip install --require-hashes -r requirements-dev.txt
       - name: Check source correctness
         run: ruff check scripts tests
+      # The workflows job installs yamllint from main's lock, so a pull request that
+      # changes that pin was never exercised. Run the caller's own yamllint command
+      # with the proposed lock and checkout, mirroring linter.yml's defaults.
+      - name: Check YAML with the proposed yamllint
+        run: yamllint --strict -c .yamllint.yml -- .github .yamllint.yml
       - name: Validate current agent configuration implementation
         run: python scripts/validate_agent_config.py .
       # linter.yml builds this image from the library's main checkout, so a pull request
