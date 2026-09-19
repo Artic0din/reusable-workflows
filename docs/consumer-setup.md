@@ -5,7 +5,7 @@
 Use `@main` in the external job-level uses reference.
 `@main` resolves to the tip of this repository's default branch each time the caller runs, so no bump pull request is needed in each consumer.
 A caller that needs a change frozen can still use a full commit SHA. That caller stays on the named commit and is unaffected by library changes until a pull request in its own repository advances the reference.
-The library pins its own executable tools; no second caller input is required.
+The library checks out its own executable tools; no second caller input is required.
 GitHub Actions does not follow repository redirects, so references use the permanent Artic0din/reusable-workflows namespace.
 
 The executable local calls in [validate-self.yml](../.github/workflows/validate-self.yml) demonstrate each input.
@@ -85,7 +85,7 @@ Record its library source revision in the rollout pull-request body and use the 
 
 A `@main` reference never changes in the caller, so Dependabot has nothing to bump and this library needs no github-actions entry there.
 Keep a local Dependabot github-actions entry for any third-party actions the caller uses directly.
-Review workflow changes and any embedded validation-tool pin updates together.
+Review workflow and validation-tool changes together; both reach callers from `main` on their next run.
 Update matching workflow-contract links in consumer guides and skills in the same PR, including Dependabot PRs.
 Keep copied-skill manifest revisions unchanged for workflow-only updates; those revisions record the skills' merge bases.
 Exclude shared-workflow updates from existing dependency auto-merge paths until they receive the required review and validation.

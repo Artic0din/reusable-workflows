@@ -35,8 +35,9 @@
 
 ## Implementation conventions
 
-- Pin external actions to full commit SHAs, with verified version comments for released actions.
-- Consumers reference this library's reusable workflows at `@main`; the embedded validation-tools checkout stays a fixed commit so callers cannot substitute executable tooling.
+- Do not pin a version or commit SHA in hand-written workflows. Reference external actions by their floating major tag, and this library, including linter.yml's validation-tools checkout, at `main`.
+- Tool-generated pins are the exception and stay as they are: the gh-aw action lock and compiled reviewer lock, the actionlint image digest, the release-pinned gitleaks binary, and the hash-locked Python requirements.
+- Consumers reference this library's reusable workflows at `@main`. The validation-tools reference is a literal the library controls, so a caller still cannot substitute executable tooling.
 - Keep checks read-only and disable privileged features until the caller explicitly opts in.
 - Recheck current Dependabot identity, signed commits, strict rules, and expected head; never approve reviews or bypass protections.
 - Pass event values through environment variables, not shell interpolation.

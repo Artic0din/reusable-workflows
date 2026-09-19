@@ -23,20 +23,20 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out caller
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        uses: actions/checkout@v7
         with:
           path: source
           persist-credentials: false
       - name: Check out versioned validation tools
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        uses: actions/checkout@v7
         with:
           repository: Artic0din/reusable-workflows
           # Library-owned executable tools cannot be replaced by a caller input.
-          ref: 414b675faa1064005dc3f96d783d649bbdf46d11
+          ref: main
           path: automation
           persist-credentials: false
       - name: Set up validation Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        uses: actions/setup-python@v7
         with:
           python-version-file: automation/.python-version
       - name: Install locked validation tools

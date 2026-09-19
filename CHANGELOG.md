@@ -20,13 +20,22 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Changed
 
+- Changed CodeQL results for consumers that enable it. `codeql-analysis.yml` now references `github/codeql-action@v4`
+  rather than the v4.37.9 commit it was pinned to. That tag currently resolves to v4.38.1, which ships CodeQL bundle
+  2.27.0 in place of 2.26.4, so query packs and alert results move on the next run with no pull request in the caller.
+- Replaced every SHA-pinned action reference in this library's workflows with its floating major tag, and pointed
+  `linter.yml`'s library-owned validation bundle at `main` instead of a fixed commit.
+  Consumers already receive these workflows from `main`, so a fixed bundle revision only held the tools behind the
+  workflow running them, and every release needed a pin-bump commit. The bundle reference stays a literal the
+  library controls and is still not a caller input; the contract test now asserts that property rather than a SHA shape.
 - Documented `@main` as the consumer reference for this library's reusable workflows, replacing the full-commit-SHA pin.
   `@main` resolves to the tip of the default branch at each caller run, so nothing is rewritten in the caller and Dependabot has nothing to bump for this library; rollback is a revert here rather than a pull request in every caller.
-  A caller that needs a change frozen can still use a full commit SHA. The library-owned validation-tools checkout, third-party actions, the actionlint image, the gitleaks binary, and the pinned review skills are unaffected.
+  A caller that needs a change frozen can still use a full commit SHA. The actionlint image, the gitleaks binary, and the compiled review-skill locks are unaffected.
 
 ### Fixed
 
-- Advanced the library-owned validation-tools checkout in `linter.yml` to the revision that drops zizmor, so callers stop installing the unused dependency on every linter run.
+- Stopped callers installing the removed zizmor dependency on every linter run. The library-owned validation-tools
+  checkout had been left on a revision predating the removal, and now tracks `main`.
 
 - Removed the baseline check's deprecated Node 20 action dependency by validating required paths with the runner's Python standard library in isolated mode.
   Preserved empty-list and missing-path failures and added regression coverage for literal filenames, whitespace, directories and symlinks.

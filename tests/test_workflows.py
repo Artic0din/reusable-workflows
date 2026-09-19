@@ -136,12 +136,14 @@ class WorkflowContractTests(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertNotEqual(run_step(script, self.root, OUTPUT_PATH=value).returncode, 0)
 
-    def test_executable_tools_are_pinned_by_the_library(self) -> None:
+    def test_executable_tools_are_library_owned(self) -> None:
         workflow = yaml.safe_load((ROOT / ".github/workflows/linter.yml").read_text())
         checkout = next(step for step in workflow["jobs"]["lint"]["steps"]
                         if step["name"] == "Check out versioned validation tools")
         self.assertEqual(checkout["with"]["repository"], "Artic0din/reusable-workflows")
-        self.assertRegex(checkout["with"]["ref"], r"^[0-9a-f]{40}$")
+        # The revision is a literal the library controls, never a caller input; callers
+        # already receive the workflow from main, so the bundle tracks main rather than a pin.
+        self.assertEqual(checkout["with"]["ref"], "main")
         self.assertFalse(checkout["with"]["persist-credentials"])
 
     def test_skills_reviewer_is_current_head_bounded_and_pinned(self) -> None:
