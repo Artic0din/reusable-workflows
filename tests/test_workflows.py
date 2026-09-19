@@ -1,5 +1,4 @@
 """Run the actual workflow shell steps against isolated consumer repositories."""
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -144,6 +143,21 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertRegex(checkout["with"]["ref"], r"^[0-9a-f]{40}$")
         self.assertFalse(checkout["with"]["persist-credentials"])
 
+    def test_validate_self_gates_the_generated_lock(self) -> None:
+        """The unit suite cannot recompute gh-aw's hash, so CI must run the real compiler."""
+        workflow = yaml.safe_load((ROOT / ".github/workflows/validate-self.yml").read_text())
+        steps = workflow["jobs"]["source"]["steps"]
+        setup = next(step for step in steps if "gh-aw/actions/setup-cli" in str(step.get("uses", "")))
+        lock_metadata = json.loads(
+            (ROOT / ".github/workflows/skills-reviewer.lock.yml").read_text()
+            .splitlines()[0].removeprefix("# gh-aw-metadata: "))
+        self.assertEqual(setup["with"]["version"], lock_metadata["compiler_version"])
+        gate = next(step for step in steps if "gh aw compile" in str(step.get("run", "")))
+        self.assertIn("--validate", gate["run"])
+        self.assertIn("git diff --exit-code", gate["run"])
+        self.assertIn(".github/workflows/skills-reviewer.lock.yml", gate["run"])
+        self.assertIn(".github/aw/actions-lock.json", gate["run"])
+
     def test_skills_reviewer_is_current_head_bounded_and_pinned(self) -> None:
         source_text = (ROOT / ".github/workflows/skills-reviewer.md").read_text()
         frontmatter = yaml.safe_load(source_text.split("---", 2)[1])
@@ -185,15 +199,24 @@ class WorkflowContractTests(unittest.TestCase):
         lock_text = (ROOT / ".github/workflows/skills-reviewer.lock.yml").read_text()
         lock_metadata = json.loads(lock_text.splitlines()[0].removeprefix("# gh-aw-metadata: "))
         self.assertEqual(lock_metadata["compiler_version"], "v0.88.2")
+        # The hash itself is not recomputed here: gh-aw hashes its own canonical form,
+        # not the raw frontmatter, so reimplementing it drifts from the compiler. The
+        # `gh aw compile` plus `git diff --exit-code` gate in validate-self.yml is
+        # authoritative for that, and test_validate_self_gates_the_generated_lock
+        # below asserts that gate exists.
+        self.assertRegex(lock_metadata["frontmatter_hash"], r"^[0-9a-f]{64}$")
+        # Assert a real source-to-lock link instead, so a hand-edited lock is caught
+        # without the gate. A dependency bot silently reverted this value in the
+        # generated file while the source kept the intended one.
         self.assertEqual(
-            lock_metadata["frontmatter_hash"],
-            hashlib.sha256(source_text.split("---", 2)[1].strip("\n").encode()).hexdigest(),
+            frontmatter["max-turns"],
+            int(re.search(r"^\s*GH_AW_MAX_TURNS: (\d+)$", lock_text, re.MULTILINE).group(1)),
         )
+        self.assertIn(f'"maxRuns":{frontmatter["max-turns"]}', lock_text)
         self.assertRegex(lock_text, r"github/gh-aw-actions/setup@[0-9a-f]{40}")
         self.assertIn("cancel-in-progress: true", lock_text)
         self.assertIn('github.event.action != \'edited\'', lock_text)
         self.assertIn('github.event.action == \'edited\' && github.event.changes.base.ref.from', lock_text)
-        self.assertIn('"maxRuns":45', lock_text)
         self.assertIn(r'\"report-as-issue\":\"false\"', lock_text)
         self.assertIn("GH_AW_FAILURE_REPORT_AS_ISSUE: \"false\"", lock_text)
         self.assertIn("github.event.pull_request.head.repo.id == github.repository_id", lock_text)
