@@ -4,7 +4,9 @@
 
 Use `@main` in the external job-level uses reference.
 `@main` resolves to the tip of this repository's default branch each time the caller runs, so no bump pull request is needed in each consumer.
-A caller that needs a change frozen can still use a full commit SHA. That caller stays on the named commit and is unaffected by library changes until a pull request in its own repository advances the reference.
+A caller that needs a change frozen can still use a full commit SHA. That caller stays on the named workflow commit until a pull request in its own repository advances the reference.
+A pinned reference freezes the workflow definition only. `linter.yml` checks its validation bundle out of this library at `main`, so the scripts, the dependency lock and the actionlint image it runs still track the tip even for a pinned caller.
+Nothing else in the library reaches a pinned caller.
 The library checks out its own executable tools; no second caller input is required.
 GitHub Actions does not follow repository redirects, so references use the permanent Artic0din/reusable-workflows namespace.
 

@@ -46,8 +46,10 @@ It checks out the caller under source and this library under automation.
 Callers cannot override that checkout revision through workflow inputs; the reference is literal, not an input.
 Callers already receive the workflow itself from `main`, so a fixed bundle revision would only hold the tools behind the workflow that runs them.
 The two are resolved at different moments: the workflow when the caller's run is created, the bundle when its checkout step executes.
-A merge landing between those moments gives that one run a workflow and a bundle from different commits, which a re-run resolves.
-Change workflow and tooling together, and expect in-flight caller runs to fail rather than silently mix them.
+A merge landing between those moments gives that one run a workflow and a bundle from different commits.
+No revision comparison guards this, so the run executes the mismatched pair rather than being rejected; a re-run picks up a consistent one.
+Change workflow and tooling together so that window stays harmless.
+A caller pinned to a workflow SHA is exposed to the same thing permanently: its bundle always comes from `main`.
 The self-validation source job tests the current implementation as well as exercising the reusable caller.
 The actionlint Dockerfile and validation dependencies are library-owned.
 
