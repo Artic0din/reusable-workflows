@@ -74,6 +74,14 @@ jobs:
         run: ruff check scripts tests
       - name: Validate current agent configuration implementation
         run: python scripts/validate_agent_config.py .
+      # linter.yml builds this image from the library's main checkout, so a pull request
+      # changing the Dockerfile reaches every caller the moment it merges. Build and run
+      # the proposed image here so a broken bundle fails before merge, not after.
+      - name: Check workflow syntax with the proposed actionlint bundle
+        run: |
+          docker build --tag proposed-actionlint .github/actions/actionlint
+          docker run --rm --mount "type=bind,source=$GITHUB_WORKSPACE,target=/src,readonly" \
+            --workdir /src proposed-actionlint -color
       - name: Install scanner for its history regression
         run: |
           python - <<'PY'

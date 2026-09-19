@@ -10,6 +10,10 @@ Nothing else in the library reaches a pinned caller.
 The library checks out its own executable tools; no second caller input is required.
 GitHub Actions does not follow repository redirects, so references use the permanent Artic0din/reusable-workflows namespace.
 
+A caller whose organization enables "Require actions to be pinned to a full-length commit SHA" may be unable to consume these workflows.
+GitHub documents that setting as exempting reusable workflows referenced by tag, but not what it does to the action references inside a called workflow, which run in the caller's context.
+This library now references its actions by floating major ref, so a caller under that policy should verify a real run before adopting it. No current consumer enables it.
+
 The executable local calls in [validate-self.yml](../.github/workflows/validate-self.yml) demonstrate each input.
 The external pilot is maintained as a separate consumer pull request.
 A public library can be called from public or private projects when their Actions policy permits it.

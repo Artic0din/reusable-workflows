@@ -20,6 +20,15 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ### Changed
 
+- Exercised the proposed actionlint bundle before merge. `linter.yml` builds that image from this library's `main`
+  checkout, so a pull request changing its Dockerfile previously reached every caller the moment it merged without
+  ever being built. `validate-self.yml` now builds and runs the pull request's own image against the pull request
+  checkout. This matters more now that callers track `main`, because activation is immediate rather than waiting
+  for a deliberate pin bump.
+- Documented a caller-policy limitation. An organization that enables "Require actions to be pinned to a
+  full-length commit SHA" may not be able to consume these workflows now that their action references float.
+  GitHub documents that setting as exempting reusable workflows referenced by tag but is silent on the action
+  references inside a called workflow, so such a caller should verify a real run. No current consumer enables it.
 - Changed CodeQL results for consumers that enable it. `codeql-analysis.yml` now references `github/codeql-action@v4`
   rather than the v4.37.9 commit it was pinned to. That tag currently resolves to v4.38.1, which ships CodeQL bundle
   2.27.0 in place of 2.26.4, so query packs and alert results move on the next run with no pull request in the caller.
