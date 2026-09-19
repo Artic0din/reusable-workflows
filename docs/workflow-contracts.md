@@ -135,7 +135,7 @@ codex-review-gate.yml requires a positive integer pull-request-number and caller
 It does not check out code, execute pull-request content, approve reviews, merge changes, or receive publishing credentials.
 The caller references the public workflow source at `@main` by default.
 A full commit SHA is a supported alternative when a caller needs the reference frozen, as described in [consumer setup](consumer-setup.md).
-This workflow checks nothing out and calls no action, so a pin here freezes it completely. That is not true of `linter.yml`.
+This workflow checks nothing out and invokes no action, so it is the only one where a pin is a complete freeze. Every other workflow references actions by floating major ref, and `linter.yml` also resolves its bundle at `main`.
 
 The workflow publishes the commit-status context `Codex review complete`.
 Require this exact context from GitHub Actions after verifying a real consumer run; the workflow job's own success is not the completion signal.
