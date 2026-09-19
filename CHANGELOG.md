@@ -31,7 +31,11 @@ All notable changes are documented here using Keep a Changelog conventions.
   `GH_AW_MAX_TURNS` from 45 to 30, which silently undid the invocation-cap fix and left the frontmatter hash
   mismatched so every `activation` run failed. Regenerated with the pinned compiler.
   The contract test no longer reimplements gh-aw's frontmatter hash, which disagreed with the compiler and made
-  the unit test and the determinism gate mutually unsatisfiable; the gate remains authoritative.
+  the unit test and the determinism gate mutually unsatisfiable. It now derives `max-turns` from the source and
+  requires the generated lock to agree, which is the value that regressed.
+- Added the compiler-backed determinism gate to `validate-self.yml`. Nothing in this repository ran `gh aw compile`,
+  so a stale lock could merge and only surfaced later as a failed `activation` run. The gate installs the compiler
+  version recorded in the lock and fails on any diff, and a contract test asserts the gate itself still exists.
 - Advanced the library-owned validation-tools checkout in `linter.yml` to the revision that drops zizmor, so callers stop installing the unused dependency on every linter run.
 
 - Removed the baseline check's deprecated Node 20 action dependency by validating required paths with the runner's Python standard library in isolated mode.
