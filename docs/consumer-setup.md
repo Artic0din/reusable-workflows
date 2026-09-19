@@ -5,7 +5,8 @@
 Use `@main` in the external job-level uses reference.
 `@main` resolves to the tip of this repository's default branch each time the caller runs, so no bump pull request is needed in each consumer.
 A caller that needs a change frozen can still use a full commit SHA. That caller stays on the named workflow commit until a pull request in its own repository advances the reference.
-A pinned reference freezes the workflow definition only. `linter.yml` checks its validation bundle out of this library at `main`, so the scripts, the dependency lock and the actionlint image it runs still track the tip even for a pinned caller.
+A pin is a complete freeze for every workflow except `linter.yml`, because no other workflow checks this library out.
+`linter.yml` is the exception: it checks its validation bundle out at `main`, so the scripts, the dependency lock and the actionlint image it runs still track the tip even for a pinned caller.
 Nothing else in the library reaches a pinned caller.
 The library checks out its own executable tools; no second caller input is required.
 GitHub Actions does not follow repository redirects, so references use the permanent Artic0din/reusable-workflows namespace.
@@ -119,7 +120,8 @@ Validate a change against this library's self-tests and a representative consume
 A change that alters a check context also needs matching ruleset or branch-protection updates in each consumer; a `@main` caller adopts every other change without a pull request.
 Roll back by reverting the change in this library; every `@main` caller runs the reverted code from that point.
 A caller that chose a full commit SHA rolls back the workflow definition by reverting that reference.
-That does not roll back `linter.yml`'s validation bundle, which resolves `main` on every run regardless of how the caller references the workflow.
+For every workflow but `linter.yml` that is a complete rollback.
+`linter.yml`'s validation bundle resolves `main` on every run regardless of how the caller references the workflow, so reverting the reference does not roll it back.
 A bad change to the scripts, the dependency lock or the actionlint image has to be reverted in this library; there is no caller-side rollback for it.
 Changes to inputs, permissions, output checks, or result semantics require a documented migration.
 Never publish a release or enable privileged behavior solely because YAML parsing passed.
