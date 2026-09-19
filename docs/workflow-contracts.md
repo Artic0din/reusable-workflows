@@ -48,7 +48,8 @@ Callers already receive the workflow itself from `main`, so a fixed bundle revis
 The two are resolved at different moments: the workflow when the caller's run is created, the bundle when its checkout step executes.
 A merge landing between those moments gives that one run a workflow and a bundle from different commits.
 No revision comparison guards this, so the run executes the mismatched pair rather than being rejected.
-A re-run is not a reliable fix: it keeps the original event's commit and can resolve into the same window. A new run after the branch has settled is what may produce a consistent pair.
+A re-run is not a reliable fix: it keeps the original event's commit and can resolve into the same window.
+A new run after the branch has settled is what may produce a consistent pair.
 Change workflow and tooling together so that window stays harmless.
 A caller pinned to a workflow SHA is exposed to the same thing permanently: its bundle always comes from `main`.
 The self-validation source job tests the current implementation as well as exercising the reusable caller.
