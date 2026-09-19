@@ -35,7 +35,7 @@
 
 ## Implementation conventions
 
-- Do not pin a version or commit SHA in hand-written workflows. Reference external actions by their floating major tag, and this library, including linter.yml's validation-tools checkout, at `main`.
+- Do not pin a version or commit SHA in hand-written workflows. Reference external actions by their floating major ref, which upstream may publish as a tag or a protected branch, and this library, including linter.yml's validation-tools checkout, at `main`.
 - Tool-generated pins are the exception and stay as they are: the gh-aw action lock and compiled reviewer lock, the actionlint image digest, the release-pinned gitleaks binary, and the hash-locked Python requirements.
 - Consumers reference this library's reusable workflows at `@main`. The validation-tools reference is a literal the library controls, so a caller still cannot substitute executable tooling.
 - Keep checks read-only and disable privileged features until the caller explicitly opts in.
