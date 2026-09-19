@@ -79,6 +79,19 @@ jobs:
         run: yamllint --strict -c .yamllint.yml -- .github .yamllint.yml
       - name: Validate current agent configuration implementation
         run: python scripts/validate_agent_config.py .
+      # gh-aw publishes no major tag, so this reference stays pinned; see
+      # .github/copilot-instructions.md for the retained-pin exceptions.
+      - name: Install the pinned agentic workflow compiler
+        uses: github/gh-aw/actions/setup-cli@8e30bcd8897f5047051fa3971188e1dd4cdb23cf  # v0.88.2
+        with:
+          version: v0.88.2
+      - name: Verify the generated reviewer lock matches its source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh aw compile skills-reviewer --validate --no-check-update
+          git ls-files --error-unmatch .github/workflows/skills-reviewer.lock.yml .github/aw/actions-lock.json
+          git diff --exit-code -- .github/workflows/skills-reviewer.lock.yml .github/aw/actions-lock.json
       # linter.yml builds this image from the library's main checkout, so a pull request
       # changing the Dockerfile reaches every caller the moment it merges. Build and run
       # the proposed image here so a broken bundle fails before merge, not after.
