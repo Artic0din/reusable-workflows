@@ -14,9 +14,9 @@ Keep reusable entrypoints in .github/workflows with workflow_call.
 Keep Copilot's copilot-setup-steps job and Dependabot's configuration in the consuming repository.
 Use read-only permissions for checks and explicit caller opt-in for privileged automation.
 Never execute pull-request code in the Dependabot target workflow, approve reviews automatically, or bypass protections.
-Resolve action release tags to full SHAs and inspect action metadata before updating references.
-When changing validation scripts or tool locks, push that source commit on the feature branch and update linter.yml's embedded tools pin in a subsequent commit before release.
-Keep that pin library-owned; caller input must not select executable tooling.
+Reference actions by their floating major tag and inspect action metadata before updating references.
+linter.yml checks its validation bundle out of this library at `main`, so a tooling change reaches callers on their next run without a second commit.
+Keep that reference library-owned; caller input must not select executable tooling.
 Keep generated-output verification sensitive to changed, deleted, newly generated, and ignored files.
 For gh-aw workflows, edit the Markdown source, compile the `.lock.yml` with the recorded compiler version and pinned action release, and commit the source, lock, `.github/aw/actions-lock.json`, and `.gitattributes` changes together.
 Treat event-driven agentic workflows as repository-local assets; document copying and validation instead of presenting them as `workflow_call` entrypoints.

@@ -61,17 +61,22 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        uses: actions/setup-python@v7
         with:
           python-version-file: .python-version
       - name: Install locked tools
         run: python -m pip install --require-hashes -r requirements-dev.txt
       - name: Check source correctness
         run: ruff check scripts tests
+      # The workflows job installs yamllint from main's lock, so a pull request that
+      # changes that pin was never exercised. Run the caller's own yamllint command
+      # with the proposed lock and checkout, mirroring linter.yml's defaults.
+      - name: Check YAML with the proposed yamllint
+        run: yamllint --strict -c .yamllint.yml -- .github .yamllint.yml
       - name: Validate current agent configuration implementation
         run: python scripts/validate_agent_config.py .
       # gh-aw publishes no major tag, so this reference stays pinned; see
@@ -87,6 +92,14 @@ jobs:
           gh aw compile skills-reviewer --validate --no-check-update
           git ls-files --error-unmatch .github/workflows/skills-reviewer.lock.yml .github/aw/actions-lock.json
           git diff --exit-code -- .github/workflows/skills-reviewer.lock.yml .github/aw/actions-lock.json
+      # linter.yml builds this image from the library's main checkout, so a pull request
+      # changing the Dockerfile reaches every caller the moment it merges. Build and run
+      # the proposed image here so a broken bundle fails before merge, not after.
+      - name: Check workflow syntax with the proposed actionlint bundle
+        run: |
+          docker build --tag proposed-actionlint .github/actions/actionlint
+          docker run --rm --mount "type=bind,source=$GITHUB_WORKSPACE,target=/src,readonly" \
+            --workdir /src proposed-actionlint -color
       - name: Install scanner for its history regression
         run: |
           python - <<'PY'
