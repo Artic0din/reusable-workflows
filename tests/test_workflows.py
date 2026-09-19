@@ -184,16 +184,22 @@ class WorkflowContractTests(unittest.TestCase):
         lock_text = (ROOT / ".github/workflows/skills-reviewer.lock.yml").read_text()
         lock_metadata = json.loads(lock_text.splitlines()[0].removeprefix("# gh-aw-metadata: "))
         self.assertEqual(lock_metadata["compiler_version"], "v0.88.2")
-        # Only the shape is asserted here. The hash is computed by gh-aw over its own
-        # canonical form, not over the raw frontmatter, so reimplementing it here drifts
-        # from the compiler. The authoritative check is the `gh aw compile` plus
-        # `git diff --exit-code` gate in the agentic-workflows workflow.
+        # The hash itself is not recomputed here: gh-aw hashes its own canonical form,
+        # not the raw frontmatter, so reimplementing it drifts from the compiler. The
+        # `gh aw compile` plus `git diff --exit-code` gate is authoritative for that.
         self.assertRegex(lock_metadata["frontmatter_hash"], r"^[0-9a-f]{64}$")
+        # Assert a real source-to-lock link instead, so a hand-edited lock is caught
+        # without the gate. A dependency bot silently reverted this value in the
+        # generated file while the source kept the intended one.
+        self.assertEqual(
+            frontmatter["max-turns"],
+            int(re.search(r"^\s*GH_AW_MAX_TURNS: (\d+)$", lock_text, re.MULTILINE).group(1)),
+        )
+        self.assertIn(f'"maxRuns":{frontmatter["max-turns"]}', lock_text)
         self.assertRegex(lock_text, r"github/gh-aw-actions/setup@[0-9a-f]{40}")
         self.assertIn("cancel-in-progress: true", lock_text)
         self.assertIn('github.event.action != \'edited\'', lock_text)
         self.assertIn('github.event.action == \'edited\' && github.event.changes.base.ref.from', lock_text)
-        self.assertIn('"maxRuns":45', lock_text)
         self.assertIn(r'\"report-as-issue\":\"false\"', lock_text)
         self.assertIn("GH_AW_FAILURE_REPORT_AS_ISSUE: \"false\"", lock_text)
         self.assertIn("github.event.pull_request.head.repo.id == github.repository_id", lock_text)
