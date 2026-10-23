@@ -142,7 +142,7 @@ Require this exact context from GitHub Actions after verifying a real consumer r
 Missing, running or stale code-review evidence stays pending.
 Failed, cancelled, unknown or malformed evidence cannot pass.
 The one exception is a code review that failed only because Codex hit its usage limit.
-A `Failed` row passes, with a description that says the review was skipped, when the authenticated Codex account posted its "You have reached your Codex usage limits for code reviews" notice between one minute before and ten minutes after that failure.
+A `Failed` row passes, with a description that says the review was skipped, when the authenticated Codex account posted a comment that begins with its "You have reached your Codex usage limits" notice between one minute before and ten minutes after that failure.
 The review must still name the current head, and a newer trusted `@codex review` request still holds the status pending.
 Status writes retry transient failures; verification errors attempt to publish an error status, including when the initial pending write fails.
 Completed review passes only after its abbreviated commit resolves through GitHub to the full current head and the head is rechecked before publication.

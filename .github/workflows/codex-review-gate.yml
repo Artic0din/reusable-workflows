@@ -41,7 +41,7 @@ jobs:
           BOT_ID = 199175422
           BOT_LOGIN = "chatgpt-codex-connector[bot]"
           SUMMARY_MARKER = "<!-- codex-pull-request-review-summary -->"
-          USAGE_LIMIT_NOTICE = "You have reached your Codex usage limits for code reviews"
+          USAGE_LIMIT_NOTICE = re.compile(r"\s*You have reached your Codex usage limits\b")
           USAGE_LIMIT_WINDOW_BEFORE = timedelta(minutes=1)
           USAGE_LIMIT_WINDOW_AFTER = timedelta(minutes=10)
           TRUSTED_ASSOCIATIONS = {"OWNER", "MEMBER", "COLLABORATOR"}
@@ -135,7 +135,7 @@ jobs:
 
           def usage_limited(items: list[dict[str, object]], failed_at: datetime) -> bool:
               # Codex posts this notice seconds after the failed row; a quota failure must not block merging.
-              return any(is_bot(item) and USAGE_LIMIT_NOTICE in str(item.get("body", ""))
+              return any(is_bot(item) and USAGE_LIMIT_NOTICE.match(str(item.get("body", "")))
                          and failed_at - USAGE_LIMIT_WINDOW_BEFORE
                          <= timestamp(item.get("created_at")) <= failed_at + USAGE_LIMIT_WINDOW_AFTER
                          for item in items)

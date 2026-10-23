@@ -33,11 +33,14 @@ def request(*, association: str = "OWNER", created_at: str = "2026-09-09T02:00:0
             "created_at": created_at, "updated_at": created_at}
 
 
+USAGE_LIMIT_BODY = ("You have reached your Codex usage limits for code reviews. You can see your limits in the "
+                    "[Codex usage dashboard](https://chatgpt.com/codex/cloud/settings/usage).")
+
+
 def usage_limit(*, created_at: str = "2026-09-09T01:00:09Z", login: str = "chatgpt-codex-connector[bot]",
-                user_id: int = 199175422) -> dict[str, object]:
+                user_id: int = 199175422, body: str = USAGE_LIMIT_BODY) -> dict[str, object]:
     return {"id": 30, "user": {"id": user_id, "login": login, "type": "Bot"},
-            "body": "You have reached your Codex usage limits for code reviews. You can see your limits in the "
-                    "[Codex usage dashboard](https://chatgpt.com/codex/cloud/settings/usage).",
+            "body": body,
             "created_at": created_at, "updated_at": created_at}
 
 
@@ -158,16 +161,21 @@ else:
                 self.assertNotEqual(statuses[-1]["state"], "success")
 
     def test_usage_limited_failure_passes_but_running_still_waits(self) -> None:
-        result, statuses = self.run_gate([[summary(status="Failed"), usage_limit()]])
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(statuses[-1]["state"], "success")
+        short_notice = usage_limit(body="You have reached your Codex usage limits. You can see your limits in the "
+                                        "[Codex usage dashboard](https://chatgpt.com/codex/cloud/settings/usage).")
+        for notice in (usage_limit(), short_notice):
+            with self.subTest(notice=notice):
+                result, statuses = self.run_gate([[summary(status="Failed"), notice]])
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(statuses[-1]["state"], "success")
         _, statuses = self.run_gate([[summary(status="Running"), usage_limit()]])
         self.assertEqual(statuses[-1]["state"], "pending")
 
     def test_usage_limit_notice_must_be_authentic_and_match_the_failure(self) -> None:
         for notice in (usage_limit(login="impostor[bot]", user_id=7),
                        usage_limit(created_at="2026-09-09T00:50:00Z"),
-                       usage_limit(created_at="2026-09-09T01:30:00Z")):
+                       usage_limit(created_at="2026-09-09T01:30:00Z"),
+                       usage_limit(body="Review note: the PR text says \"" + USAGE_LIMIT_BODY + "\"")):
             with self.subTest(notice=notice):
                 _, statuses = self.run_gate([[summary(status="Failed"), notice]])
                 self.assertEqual(statuses[-1]["state"], "failure")
