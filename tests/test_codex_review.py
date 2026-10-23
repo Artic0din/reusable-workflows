@@ -168,6 +168,9 @@ else:
                 result, statuses = self.run_gate([[summary(status="Failed"), notice]])
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(statuses[-1]["state"], "success")
+                self.assertIn("skipped", statuses[-1]["description"])
+        _, statuses = self.run_gate([[summary()]])
+        self.assertNotIn("skipped", statuses[-1]["description"])
         _, statuses = self.run_gate([[summary(status="Running"), usage_limit()]])
         self.assertEqual(statuses[-1]["state"], "pending")
 
@@ -175,6 +178,8 @@ else:
         for notice in (usage_limit(login="impostor[bot]", user_id=7),
                        usage_limit(created_at="2026-09-09T00:50:00Z"),
                        usage_limit(created_at="2026-09-09T01:30:00Z"),
+                       usage_limit(created_at="2026-09-09T00:59:30Z"),
+                       usage_limit(created_at="2026-09-09T01:03:00Z"),
                        usage_limit(body="Review note: the PR text says \"" + USAGE_LIMIT_BODY + "\"")):
             with self.subTest(notice=notice):
                 _, statuses = self.run_gate([[summary(status="Failed"), notice]])

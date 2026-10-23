@@ -42,8 +42,10 @@ jobs:
           BOT_LOGIN = "chatgpt-codex-connector[bot]"
           SUMMARY_MARKER = "<!-- codex-pull-request-review-summary -->"
           USAGE_LIMIT_NOTICE = re.compile(r"\s*You have reached your Codex usage limits\b")
-          USAGE_LIMIT_WINDOW_BEFORE = timedelta(minutes=1)
-          USAGE_LIMIT_WINDOW_AFTER = timedelta(minutes=10)
+          # Codex posts the notice seconds after the failed row; the tolerance only absorbs second rounding.
+          USAGE_LIMIT_WINDOW_BEFORE = timedelta(seconds=5)
+          USAGE_LIMIT_WINDOW_AFTER = timedelta(minutes=2)
+          QUOTA_SKIPPED = "Codex code review skipped: Codex usage limit reached"
           TRUSTED_ASSOCIATIONS = {"OWNER", "MEMBER", "COLLABORATOR"}
 
           def api(endpoint: str, payload: dict[str, str] | None = None, *, pages: bool = False) -> object:
@@ -134,7 +136,7 @@ jobs:
               return is_bot(comment) and str(comment.get("body", "")).startswith(SUMMARY_MARKER)
 
           def usage_limited(items: list[dict[str, object]], failed_at: datetime) -> bool:
-              # Codex posts this notice seconds after the failed row; a quota failure must not block merging.
+              # A quota failure must not block merging.
               return any(is_bot(item) and USAGE_LIMIT_NOTICE.match(str(item.get("body", "")))
                          and failed_at - USAGE_LIMIT_WINDOW_BEFORE
                          <= timestamp(item.get("created_at")) <= failed_at + USAGE_LIMIT_WINDOW_AFTER
@@ -179,7 +181,7 @@ jobs:
               if resolved.get("sha") != sha:
                   raise ValueError("Codex review commit does not resolve to the current head")
               if quota_skipped:
-                  return "success", "Codex code review skipped: Codex usage limit reached", url
+                  return "success", QUOTA_SKIPPED, url
               return "success", "Codex code review completed on the current commit", url
 
           def publish(sha: str, state: str, description: str, url: str = RUN_URL,
@@ -229,7 +231,9 @@ jobs:
               if before != after:
                   return
               state, description, url = next((item for item in outcomes if item[0] != "success"),
-                                            ("success", "Codex code review completed for all PRs on this commit", RUN_URL))
+                                            next((item for item in outcomes if QUOTA_SKIPPED in item[1]),
+                                                 ("success", "Codex code review completed for all PRs on this commit",
+                                                  RUN_URL)))
               publish(sha, state, description, url)
 
           def refresh_commit(pull: dict[str, object], sha: str, requested: datetime | None) -> None:
