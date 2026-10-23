@@ -141,6 +141,9 @@ The workflow publishes the commit-status context `Codex review complete`.
 Require this exact context from GitHub Actions after verifying a real consumer run; the workflow job's own success is not the completion signal.
 Missing, running or stale code-review evidence stays pending.
 Failed, cancelled, unknown or malformed evidence cannot pass.
+The one exception is a code review that failed only because Codex hit its usage limit.
+A `Failed` row passes, with a status description that says the review was skipped (also when it is one of several PRs sharing the commit), when the authenticated Codex account posted a comment that begins with its "You have reached your Codex usage limits" notice between five seconds before and two minutes after that failure.
+The review must still name the current head, and a newer trusted `@codex review` request still holds the status pending.
 Status writes retry transient failures; verification errors attempt to publish an error status, including when the initial pending write fails.
 Completed review passes only after its abbreviated commit resolves through GitHub to the full current head and the head is rechecked before publication.
 Only the authenticated `chatgpt-codex-connector[bot]` account, including its numeric account ID and bot type, can supply evidence.
@@ -156,7 +159,7 @@ Untrusted commenters cannot hold the gate by posting review requests that Codex 
 
 Keep required review-conversation resolution enabled independently: completed code review can contain findings and does not mean approval.
 Enable Codex Review all PRs and On every push before requiring this status.
-Do not silently pass when Codex is unavailable or its summary format changes.
+Do not silently pass when Codex is unavailable or its summary format changes; only the explicit usage-limit notice described above passes, and it says so in the status.
 
 Callers serialize gate jobs repository-wide, after the trusted-event job condition, with cancel-in-progress: false and queue: max.
 The default single pending run can discard a base-change or deleted-request event before its invalidation is persisted.

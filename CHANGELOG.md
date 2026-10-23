@@ -4,6 +4,10 @@ All notable changes are documented here using Keep a Changelog conventions.
 
 ## [Unreleased]
 
+### Changed
+
+- The Codex completion status now passes when a code review failed only because Codex reached its usage limit, so quota exhaustion no longer blocks merging; running reviews still wait and other failures still fail.
+
 ### Added
 
 - Added a repository-local engineering review workflow with five commit-pinned skills, pre-fetched current-head context, bounded inline findings, and a generated gh-aw lock.
