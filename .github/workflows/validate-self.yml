@@ -82,7 +82,7 @@ jobs:
       # gh-aw publishes no major tag, so this reference stays pinned; see
       # .github/copilot-instructions.md for the retained-pin exceptions.
       - name: Install the pinned agentic workflow compiler
-        uses: github/gh-aw/actions/setup-cli@8e30bcd8897f5047051fa3971188e1dd4cdb23cf  # v0.88.2
+        uses: github/gh-aw/actions/setup-cli@a68f5a9436d2a014dbd1d1d48ff86c4bdec7424a  # v0.92.0
         with:
           version: v0.88.2
       - name: Verify the generated reviewer lock matches its source
